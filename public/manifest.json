@@ -1,14 +1,14 @@
 {
-  "name": "Cinny",
-  "short_name": "Cinny",
+  "name": "Loaf Chat",
+  "short_name": "Loaf Chat",
   "description": "Yet another matrix client",
   "dir": "auto",
   "lang": "en-US",
   "display": "standalone",
   "orientation": "portrait",
   "start_url": "./",
-  "background_color": "#fff",
-  "theme_color": "#fff",
+  "background_color": "#FFF7ED",
+  "theme_color": "#003049",
   "icons": [
     {
       "src": "./public/android/android-chrome-36x36.png",
