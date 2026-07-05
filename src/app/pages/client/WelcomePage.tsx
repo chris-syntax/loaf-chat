@@ -22,17 +22,6 @@ export function WelcomePage() {
               <Box grow="Yes" style={{ maxWidth: toRem(300) }} direction="Column" gap="300">
                 <Button
                   as="a"
-                  href="https://github.com/cinnyapp/cinny"
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  before={<Icon size="200" src={Icons.Code} />}
-                >
-                  <Text as="span" size="B400" truncate>
-                    Source Code
-                  </Text>
-                </Button>
-                <Button
-                  as="a"
                   href="https://loaf.moe"
                   target="_blank"
                   rel="noreferrer noopener"

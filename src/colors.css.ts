@@ -1,103 +1,6 @@
 import { createTheme } from '@vanilla-extract/css';
 import { color } from 'folds';
 
-export const loafTheme = createTheme(color, {
-  Background: {
-    Container: '#FFF7ED',
-    ContainerHover: '#F5E9D6',
-    ContainerActive: '#EFDFC4',
-    ContainerLine: '#E5D9C4',
-    OnContainer: '#003049',
-  },
-
-  Surface: {
-    Container: '#FFFFFF',
-    ContainerHover: '#F9FAFB',
-    ContainerActive: '#F3F4F6',
-    ContainerLine: '#E5E7EB',
-    OnContainer: '#003049',
-  },
-
-  SurfaceVariant: {
-    Container: '#F9FAFB',
-    ContainerHover: '#F3F4F6',
-    ContainerActive: '#E9EBEE',
-    ContainerLine: '#E5E7EB',
-    OnContainer: '#003049',
-  },
-
-  Primary: {
-    Main: '#D62828',
-    MainHover: '#C11F1F',
-    MainActive: '#A81818',
-    MainLine: '#8F1414',
-    OnMain: '#FFFFFF',
-    Container: '#F9DFDF',
-    ContainerHover: '#F3C9C9',
-    ContainerActive: '#EDB3B3',
-    ContainerLine: '#EB9494',
-    OnContainer: '#A30000',
-  },
-
-  Secondary: {
-    Main: '#003049',
-    MainHover: '#002438',
-    MainActive: '#001C2C',
-    MainLine: '#001420',
-    OnMain: '#FFF7ED',
-    Container: '#D9E0E4',
-    ContainerHover: '#C7D0D6',
-    ContainerActive: '#B5C1C8',
-    ContainerLine: '#8098A4',
-    OnContainer: '#003049',
-  },
-
-  Success: {
-    Main: '#4E9E76',
-    MainHover: '#458A67',
-    MainActive: '#3C7859',
-    MainLine: '#34684D',
-    OnMain: '#FFFFFF',
-    Container: '#ECFDF5',
-    ContainerHover: '#DCFCE9',
-    ContainerActive: '#C6F7DA',
-    ContainerLine: '#A7EFC5',
-    OnContainer: '#1F5B3F',
-  },
-
-  Warning: {
-    Main: '#D97B2A',
-    MainHover: '#C26D24',
-    MainActive: '#AC601F',
-    MainLine: '#96541B',
-    OnMain: '#FFFFFF',
-    Container: '#FDECD3',
-    ContainerHover: '#FBE0B8',
-    ContainerActive: '#F8D39C',
-    ContainerLine: '#F3C078',
-    OnContainer: '#7A3F0F',
-  },
-
-  Critical: {
-    Main: '#EF4444',
-    MainHover: '#DC3535',
-    MainActive: '#C42B2B',
-    MainLine: '#AC2222',
-    OnMain: '#FFFFFF',
-    Container: '#FEF2F2',
-    ContainerHover: '#FDE2E2',
-    ContainerActive: '#FBCBCB',
-    ContainerLine: '#F7A8A8',
-    OnContainer: '#7F1D1D',
-  },
-
-  Other: {
-    FocusRing: 'rgba(214, 40, 40, 0.5)',
-    Shadow: 'rgba(0, 48, 73, 0.2)',
-    Overlay: 'rgba(0, 48, 73, 0.5)',
-  },
-});
-
 export const silverTheme = createTheme(color, {
   Background: {
     Container: '#DEDEDE',
@@ -221,16 +124,16 @@ const darkThemeData = {
   },
 
   Primary: {
-    Main: '#F0A8A8',
-    MainHover: '#EC9797',
-    MainActive: '#E88686',
-    MainLine: '#E47575',
-    OnMain: '#450808',
-    Container: '#5C1F1F',
-    ContainerHover: '#672424',
-    ContainerActive: '#722929',
-    ContainerLine: '#7D2E2E',
-    OnContainer: '#FBD8D8',
+    Main: '#BDB6EC',
+    MainHover: '#B2AAE9',
+    MainActive: '#ADA3E8',
+    MainLine: '#A79DE6',
+    OnMain: '#2C2843',
+    Container: '#413C65',
+    ContainerHover: '#494370',
+    ContainerActive: '#50497B',
+    ContainerLine: '#575086',
+    OnContainer: '#E3E1F7',
   },
 
   Secondary: {
@@ -332,4 +235,163 @@ export const butterTheme = createTheme(color, {
     ContainerLine: '#666459',
     OnContainer: '#F2EED3',
   },
+});
+
+// --- Everything below this line is loaf.moe's own addition, kept fully
+// separate from cinny's themes above so upstream merges stay clean.
+
+export const loafLightTheme = createTheme(color, {
+  Background: {
+    Container: '#FFF7ED',
+    ContainerHover: '#F5E9D6',
+    ContainerActive: '#EFDFC4',
+    ContainerLine: '#E5D9C4',
+    OnContainer: '#003049',
+  },
+
+  Surface: {
+    Container: '#FFFFFF',
+    ContainerHover: '#F9FAFB',
+    ContainerActive: '#F3F4F6',
+    ContainerLine: '#E5E7EB',
+    OnContainer: '#003049',
+  },
+
+  SurfaceVariant: {
+    Container: '#F9FAFB',
+    ContainerHover: '#F3F4F6',
+    ContainerActive: '#E9EBEE',
+    ContainerLine: '#E5E7EB',
+    OnContainer: '#003049',
+  },
+
+  Primary: {
+    Main: '#D62828',
+    MainHover: '#C11F1F',
+    MainActive: '#A81818',
+    MainLine: '#8F1414',
+    OnMain: '#FFFFFF',
+    Container: '#F9DFDF',
+    ContainerHover: '#F3C9C9',
+    ContainerActive: '#EDB3B3',
+    ContainerLine: '#EB9494',
+    OnContainer: '#A30000',
+  },
+
+  Secondary: {
+    Main: '#003049',
+    MainHover: '#002438',
+    MainActive: '#001C2C',
+    MainLine: '#001420',
+    OnMain: '#FFF7ED',
+    Container: '#D9E0E4',
+    ContainerHover: '#C7D0D6',
+    ContainerActive: '#B5C1C8',
+    ContainerLine: '#8098A4',
+    OnContainer: '#003049',
+  },
+
+  Success: {
+    Main: '#4E9E76',
+    MainHover: '#458A67',
+    MainActive: '#3C7859',
+    MainLine: '#34684D',
+    OnMain: '#FFFFFF',
+    Container: '#ECFDF5',
+    ContainerHover: '#DCFCE9',
+    ContainerActive: '#C6F7DA',
+    ContainerLine: '#A7EFC5',
+    OnContainer: '#1F5B3F',
+  },
+
+  Warning: {
+    Main: '#D97B2A',
+    MainHover: '#C26D24',
+    MainActive: '#AC601F',
+    MainLine: '#96541B',
+    OnMain: '#FFFFFF',
+    Container: '#FDECD3',
+    ContainerHover: '#FBE0B8',
+    ContainerActive: '#F8D39C',
+    ContainerLine: '#F3C078',
+    OnContainer: '#7A3F0F',
+  },
+
+  Critical: {
+    Main: '#EF4444',
+    MainHover: '#DC3535',
+    MainActive: '#C42B2B',
+    MainLine: '#AC2222',
+    OnMain: '#FFFFFF',
+    Container: '#FEF2F2',
+    ContainerHover: '#FDE2E2',
+    ContainerActive: '#FBCBCB',
+    ContainerLine: '#F7A8A8',
+    OnContainer: '#7F1D1D',
+  },
+
+  Other: {
+    FocusRing: 'rgba(214, 40, 40, 0.5)',
+    Shadow: 'rgba(0, 48, 73, 0.2)',
+    Overlay: 'rgba(0, 48, 73, 0.5)',
+  },
+});
+
+export const loafDarkTheme = createTheme(color, {
+  Background: {
+    Container: '#000016',
+    ContainerHover: '#001220',
+    ContainerActive: '#001C2E',
+    ContainerLine: '#0A2A3D',
+    OnContainer: '#FFF7ED',
+  },
+
+  Surface: {
+    Container: '#062033',
+    ContainerHover: '#0C2A40',
+    ContainerActive: '#12344D',
+    ContainerLine: '#1A3F59',
+    OnContainer: '#FFF7ED',
+  },
+
+  SurfaceVariant: {
+    Container: '#0C2A40',
+    ContainerHover: '#12344D',
+    ContainerActive: '#1A3F59',
+    ContainerLine: '#234B66',
+    OnContainer: '#FFF7ED',
+  },
+
+  Primary: {
+    Main: '#F0A8A8',
+    MainHover: '#EC9797',
+    MainActive: '#E88686',
+    MainLine: '#E47575',
+    OnMain: '#450808',
+    Container: '#5C1F1F',
+    ContainerHover: '#672424',
+    ContainerActive: '#722929',
+    ContainerLine: '#7D2E2E',
+    OnContainer: '#FBD8D8',
+  },
+
+  Secondary: {
+    Main: '#FFF7ED',
+    MainHover: '#F5E9D6',
+    MainActive: '#EFDFC4',
+    MainLine: '#E5D9C4',
+    OnMain: '#003049',
+    Container: '#12344D',
+    ContainerHover: '#1A3F59',
+    ContainerActive: '#234B66',
+    ContainerLine: '#2E5773',
+    OnContainer: '#FFF7ED',
+  },
+
+  // Reused from cinny's own dark theme unchanged — state colors aren't
+  // brand-differentiating.
+  Success: darkThemeData.Success,
+  Warning: darkThemeData.Warning,
+  Critical: darkThemeData.Critical,
+  Other: darkThemeData.Other,
 });

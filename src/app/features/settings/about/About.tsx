@@ -53,7 +53,7 @@ export function About({ requestClose }: AboutProps) {
                   <Box gap="200" wrap="Wrap">
                     <Button
                       as="a"
-                      href="https://github.com/cinnyapp/cinny"
+                      href="https://github.com/chris-syntax/loaf-chat"
                       rel="noreferrer noopener"
                       target="_blank"
                       variant="Secondary"
@@ -62,7 +62,7 @@ export function About({ requestClose }: AboutProps) {
                       radii="300"
                       before={<Icon src={Icons.Code} size="100" filled />}
                     >
-                      <Text size="B300">Source Code</Text>
+                      <Text size="B300">Source</Text>
                     </Button>
                     <Button
                       as="a"
@@ -123,6 +123,27 @@ export function About({ requestClose }: AboutProps) {
                       paddingLeft: config.space.S400,
                     }}
                   >
+                    <li>
+                      <Text size="T300">
+                        Loaf Chat is a fork of{' '}
+                        <a
+                          href="https://github.com/cinnyapp/cinny"
+                          rel="noreferrer noopener"
+                          target="_blank"
+                        >
+                          Cinny
+                        </a>{' '}
+                        by Ajay Bura and contributors, used under the terms of{' '}
+                        <a
+                          href="https://www.gnu.org/licenses/agpl-3.0.html"
+                          rel="noreferrer noopener"
+                          target="_blank"
+                        >
+                          AGPL-3.0
+                        </a>
+                        .
+                      </Text>
+                    </li>
                     <li>
                       <Text size="T300">
                         The{' '}
