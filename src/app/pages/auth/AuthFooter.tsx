@@ -11,12 +11,13 @@ export function AuthFooter() {
       <Text
         as="a"
         size="T300"
-        href="https://github.com/ajbura/cinny/releases"
+        href="https://github.com/chris-syntax/loaf-chat"
         target="_blank"
         rel="noreferrer"
       >
-        v4.12.3.1
+        Source
       </Text>
+      <Text size="T300">v4.12.3.1</Text>
     </Box>
   );
 }

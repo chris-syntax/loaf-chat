@@ -1,6 +1,13 @@
+import { lightTheme } from 'folds';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { onDarkFontWeight, onLightFontWeight } from '../../config.css';
-import { butterTheme, darkTheme, loafTheme, silverTheme } from '../../colors.css';
+import {
+  butterTheme,
+  darkTheme,
+  loafDarkTheme,
+  loafLightTheme,
+  silverTheme,
+} from '../../colors.css';
 import { settingsAtom } from '../state/settings';
 import { useSetting } from '../state/hooks/settings';
 
@@ -18,7 +25,7 @@ export type Theme = {
 export const LightTheme: Theme = {
   id: 'light-theme',
   kind: ThemeKind.Light,
-  classNames: [loafTheme, onLightFontWeight, 'prism-light'],
+  classNames: [lightTheme, onLightFontWeight, 'prism-light'],
 };
 
 export const SilverTheme: Theme = {
@@ -37,8 +44,25 @@ export const ButterTheme: Theme = {
   classNames: ['butter-theme', butterTheme, onDarkFontWeight, 'prism-dark'],
 };
 
+// loaf.moe's own themes — additive, not derived from any theme above. These
+// are the defaults (see useActiveTheme below); cinny's own Light/Silver/Dark/
+// Butter above stay fully intact and selectable.
+export const LoafLightTheme: Theme = {
+  id: 'loaf-light-theme',
+  kind: ThemeKind.Light,
+  classNames: [loafLightTheme, onLightFontWeight, 'prism-light'],
+};
+export const LoafDarkTheme: Theme = {
+  id: 'loaf-dark-theme',
+  kind: ThemeKind.Dark,
+  classNames: ['loaf-dark-theme', loafDarkTheme, onDarkFontWeight, 'prism-dark'],
+};
+
 export const useThemes = (): Theme[] => {
-  const themes: Theme[] = useMemo(() => [LightTheme, SilverTheme, DarkTheme, ButterTheme], []);
+  const themes: Theme[] = useMemo(
+    () => [LoafLightTheme, LoafDarkTheme, LightTheme, SilverTheme, DarkTheme, ButterTheme],
+    []
+  );
 
   return themes;
 };
@@ -46,6 +70,8 @@ export const useThemes = (): Theme[] => {
 export const useThemeNames = (): Record<string, string> =>
   useMemo(
     () => ({
+      [LoafLightTheme.id]: 'Loaf',
+      [LoafDarkTheme.id]: 'Loaf Dark',
       [LightTheme.id]: 'Light',
       [SilverTheme.id]: 'Silver',
       [DarkTheme.id]: 'Dark',
@@ -83,15 +109,15 @@ export const useActiveTheme = (): Theme => {
   const [darkThemeId] = useSetting(settingsAtom, 'darkThemeId');
 
   if (!systemTheme) {
-    const selectedTheme = themes.find((theme) => theme.id === themeId) ?? LightTheme;
+    const selectedTheme = themes.find((theme) => theme.id === themeId) ?? LoafLightTheme;
 
     return selectedTheme;
   }
 
   const selectedTheme =
     systemThemeKind === ThemeKind.Dark
-      ? themes.find((theme) => theme.id === darkThemeId) ?? DarkTheme
-      : themes.find((theme) => theme.id === lightThemeId) ?? LightTheme;
+      ? themes.find((theme) => theme.id === darkThemeId) ?? LoafDarkTheme
+      : themes.find((theme) => theme.id === lightThemeId) ?? LoafLightTheme;
 
   return selectedTheme;
 };
