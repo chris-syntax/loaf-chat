@@ -1,0 +1,7 @@
+<svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+<!-- loaf.moe mark + unread badge -->
+<rect width="18" height="18" rx="4" fill="#003049"/>
+<rect x="4.6" y="3.2" width="2.3" height="9" rx="1.15" fill="#FFF7ED"/>
+<circle cx="9" cy="12.9" r="1.55" fill="#D62828"/>
+<circle cx="15" cy="15" r="3" fill="#989898" stroke="#FFF7ED" stroke-width="1"/>
+</svg>
