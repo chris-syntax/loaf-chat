@@ -88,3 +88,19 @@ export type ILocationContent = {
   geo_uri?: string;
   info?: IThumbnailContent;
 };
+
+export const GIF_MSGTYPE = 'net.loaf.gif';
+
+// Unlike every other content type in this file, `url` here is NOT an mxc:// URI —
+// it's an HTTPS reference to the gif-bridge's auth-gated /media/:id endpoint,
+// resolved per-viewer at render time with a fresh Matrix OpenID token appended
+// (see MGif). `body`/`formatted_body` point at the public Giphy page instead,
+// since the bridge URL 401s without a live token and is useless as a plain link.
+export type IGifContent = {
+  msgtype: typeof GIF_MSGTYPE;
+  body: string;
+  format?: 'org.matrix.custom.html';
+  formatted_body?: string;
+  url: string;
+  info?: IImageInfo;
+};

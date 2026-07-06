@@ -96,9 +96,11 @@ import { settingsAtom } from '../../state/settings';
 import {
   getAudioMsgContent,
   getFileMsgContent,
+  getGifMsgContent,
   getImageMsgContent,
   getVideoMsgContent,
 } from './msgContent';
+import { GifSearchResult } from '../../utils/gifBridge';
 import { getMemberDisplayName, getMentionContent, trimReplyFromBody } from '../../utils/room';
 import { CommandAutocomplete } from './CommandAutocomplete';
 import { Command, SHRUG, TABLEFLIP, UNFLIP, useCommands } from '../../hooks/useCommands';
@@ -446,6 +448,23 @@ export const RoomInput = forwardRef<HTMLDivElement, RoomInputProps>(
       });
     };
 
+    const handleGifSelect = (gif: GifSearchResult) => {
+      mx.sendMessage(
+        roomId,
+        getGifMsgContent(
+          {
+            bridgeUrl: gif.fullUrl,
+            pageUrl: gif.pageUrl,
+            width: gif.width,
+            height: gif.height,
+            mimetype: gif.mimetype,
+            size: gif.size,
+          },
+          gif.title
+        )
+      );
+    };
+
     return (
       <div ref={ref}>
         {selectedFiles.length > 0 && (
@@ -623,6 +642,7 @@ export const RoomInput = forwardRef<HTMLDivElement, RoomInputProps>(
                         onEmojiSelect={handleEmoticonSelect}
                         onCustomEmojiSelect={handleEmoticonSelect}
                         onStickerSelect={handleStickerSelect}
+                        onGifSelect={handleGifSelect}
                         requestClose={() => {
                           setEmojiBoardTab((t) => {
                             if (t) {
@@ -665,6 +685,15 @@ export const RoomInput = forwardRef<HTMLDivElement, RoomInputProps>(
                           hideStickerBtn ? !!emojiBoardTab : emojiBoardTab === EmojiBoardTab.Emoji
                         }
                       />
+                    </IconButton>
+                    <IconButton
+                      aria-pressed={emojiBoardTab === EmojiBoardTab.Gif}
+                      onClick={() => setEmojiBoardTab(EmojiBoardTab.Gif)}
+                      variant="SurfaceVariant"
+                      size="300"
+                      radii="300"
+                    >
+                      <Icon src={Icons.Photo} filled={emojiBoardTab === EmojiBoardTab.Gif} />
                     </IconButton>
                   </PopOut>
                 )}

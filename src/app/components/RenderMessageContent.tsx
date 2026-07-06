@@ -12,6 +12,7 @@ import {
   MBadEncrypted,
   MEmote,
   MFile,
+  MGif,
   MImage,
   MLocation,
   MNotice,
@@ -30,7 +31,7 @@ import { ImageViewer } from './image-viewer';
 import { PdfViewer } from './Pdf-viewer';
 import { TextViewer } from './text-viewer';
 import { testMatrixTo } from '../plugins/matrix-to';
-import { IImageContent } from '../../types/matrix/common';
+import { GIF_MSGTYPE, IImageContent } from '../../types/matrix/common';
 
 type RenderMessageContentProps = {
   displayName: string;
@@ -262,6 +263,10 @@ export function RenderMessageContent({
 
   if (msgType === 'm.bad.encrypted') {
     return <MBadEncrypted />;
+  }
+
+  if (msgType === GIF_MSGTYPE) {
+    return <MGif content={getContent()} outlined={outlineAttachment} />;
   }
 
   return <UnsupportedContent />;
