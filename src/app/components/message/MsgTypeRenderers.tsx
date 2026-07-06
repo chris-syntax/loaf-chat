@@ -1,5 +1,5 @@
 import React, { CSSProperties, ReactNode } from 'react';
-import { Box, Chip, Icon, Icons, Spinner, Text, toRem } from 'folds';
+import { Box, Chip, Icon, Icons, Text, toRem } from 'folds';
 import { IContent } from 'matrix-js-sdk';
 import { JUMBO_EMOJI_REG, URL_REG } from '../../utils/regex';
 import { trimReplyFromBody } from '../../utils/room';
@@ -30,7 +30,6 @@ import { FALLBACK_MIMETYPE, getBlobSafeMimeType } from '../../utils/mimeTypes';
 import { parseGeoUri, scaleYDimension } from '../../utils/common';
 import { Attachment, AttachmentBox, AttachmentContent, AttachmentHeader } from './attachment';
 import { FileHeader, FileDownloadButton } from './FileHeader';
-import { useAuthedGifSrc } from '../../hooks/useAuthedGifSrc';
 
 export function MBadEncrypted() {
   return (
@@ -227,10 +226,8 @@ type MGifProps = {
 export function MGif({ content, outlined }: MGifProps) {
   const gifInfo = content?.info;
   const bridgeUrl = content.url;
-  const { src, failed } = useAuthedGifSrc(typeof bridgeUrl === 'string' ? bridgeUrl : undefined);
 
   if (typeof bridgeUrl !== 'string') return <BrokenContent />;
-  if (failed) return <BrokenContent />;
 
   const height = scaleYDimension(gifInfo?.w || 200, 200, gifInfo?.h || 200);
 
@@ -241,17 +238,13 @@ export function MGif({ content, outlined }: MGifProps) {
           height: toRem(height < 48 ? 48 : height),
         }}
       >
-        {src ? (
-          <img
-            src={src}
-            alt={content.body}
-            title={content.body}
-            loading="lazy"
-            style={{ height: '100%', width: '100%', objectFit: 'contain' }}
-          />
-        ) : (
-          <Spinner />
-        )}
+        <img
+          src={bridgeUrl}
+          alt={content.body}
+          title={content.body}
+          loading="lazy"
+          style={{ height: '100%', width: '100%', objectFit: 'contain' }}
+        />
       </AttachmentBox>
     </Attachment>
   );
