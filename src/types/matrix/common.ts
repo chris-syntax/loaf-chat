@@ -89,7 +89,7 @@ export type ILocationContent = {
   info?: IThumbnailContent;
 };
 
-export const GIF_MSGTYPE = 'net.loaf.gif';
+export const GIF_MSGTYPE = 'moe.loaf.gif';
 
 // Unlike every other content type in this file, `url` here is NOT an mxc:// URI —
 // it's a plain, unauthenticated HTTPS reference to the gif-bridge's /media/:id

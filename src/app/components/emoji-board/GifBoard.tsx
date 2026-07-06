@@ -1,6 +1,7 @@
 import React, { ChangeEventHandler, useCallback, useState } from 'react';
 import { Box, Scroll, Text } from 'folds';
 import { useMatrixClient } from '../../hooks/useMatrixClient';
+import { useAutoDiscoveryInfo } from '../../hooks/useAutoDiscoveryInfo';
 import { useDebounce } from '../../hooks/useDebounce';
 import { preventScrollWithArrowKey } from '../../utils/keyboard';
 import { GifSearchResult, searchGifs } from '../../utils/gifBridge';
@@ -12,6 +13,7 @@ type GifBoardProps = {
 };
 export function GifBoard({ onGifSelect, requestClose }: GifBoardProps) {
   const mx = useMatrixClient();
+  const autoDiscoveryInfo = useAutoDiscoveryInfo();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<GifSearchResult[]>();
   const [loading, setLoading] = useState(false);
@@ -23,11 +25,11 @@ export function GifBoard({ onGifSelect, requestClose }: GifBoardProps) {
         return;
       }
       setLoading(true);
-      const found = await searchGifs(mx, term);
+      const found = await searchGifs(mx, term, autoDiscoveryInfo);
       setLoading(false);
       setResults(found);
     },
-    [mx]
+    [mx, autoDiscoveryInfo]
   );
 
   const handleOnChange: ChangeEventHandler<HTMLInputElement> = useDebounce(

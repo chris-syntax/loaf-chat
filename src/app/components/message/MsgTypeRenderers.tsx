@@ -30,6 +30,8 @@ import { FALLBACK_MIMETYPE, getBlobSafeMimeType } from '../../utils/mimeTypes';
 import { parseGeoUri, scaleYDimension } from '../../utils/common';
 import { Attachment, AttachmentBox, AttachmentContent, AttachmentHeader } from './attachment';
 import { FileHeader, FileDownloadButton } from './FileHeader';
+import { useAutoDiscoveryInfo } from '../../hooks/useAutoDiscoveryInfo';
+import { resolveBridgeUrl } from '../../utils/gifBridge';
 
 export function MBadEncrypted() {
   return (
@@ -224,11 +226,13 @@ type MGifProps = {
   outlined?: boolean;
 };
 export function MGif({ content, outlined }: MGifProps) {
+  const autoDiscoveryInfo = useAutoDiscoveryInfo();
   const gifInfo = content?.info;
   const bridgeUrl = content.url;
 
   if (typeof bridgeUrl !== 'string') return <BrokenContent />;
 
+  const srcUrl = resolveBridgeUrl(bridgeUrl, autoDiscoveryInfo);
   const height = scaleYDimension(gifInfo?.w || 200, 200, gifInfo?.h || 200);
 
   return (
@@ -239,7 +243,7 @@ export function MGif({ content, outlined }: MGifProps) {
         }}
       >
         <img
-          src={bridgeUrl}
+          src={srcUrl}
           alt={content.body}
           title={content.body}
           loading="lazy"

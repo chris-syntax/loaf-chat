@@ -30,6 +30,9 @@ export type AutoDiscoveryInfo = Record<string, unknown> & {
       type: 'livekit';
     }
   ];
+  'moe.loaf.gif'?: {
+    api_url: string;
+  };
 };
 
 export const autoDiscovery = async (
@@ -101,6 +104,9 @@ export const autoDiscovery = async (
     content['m.identity_server'].base_url = trimTrailingSlash(
       content['m.identity_server'].base_url
     );
+  }
+  if (content['moe.loaf.gif']?.api_url) {
+    content['moe.loaf.gif'].api_url = trimTrailingSlash(content['moe.loaf.gif'].api_url);
   }
 
   return [undefined, content];

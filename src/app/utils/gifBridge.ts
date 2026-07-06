@@ -1,4 +1,5 @@
 import { MatrixClient } from 'matrix-js-sdk';
+import { AutoDiscoveryInfo } from '../cs-api';
 
 // The gif-bridge is reverse-proxied same-origin (see gitops traefik branch), so
 // plain relative paths avoid CORS entirely.
@@ -37,13 +38,34 @@ export type GifSearchResult = {
   pageUrl: string;
 };
 
-export const searchGifs = async (mx: MatrixClient, query: string): Promise<GifSearchResult[]> => {
+export const resolveBridgeUrl = (urlStr: string, info?: AutoDiscoveryInfo): string => {
+  const customUrl = info?.['moe.loaf.gif']?.api_url;
+  const baseUrl = customUrl || window.location.origin;
+  try {
+    return new URL(urlStr, baseUrl).toString();
+  } catch {
+    return urlStr;
+  }
+};
+
+export const searchGifs = async (
+  mx: MatrixClient,
+  query: string,
+  info?: AutoDiscoveryInfo
+): Promise<GifSearchResult[]> => {
   const token = await getCachedOpenIdToken(mx);
   if (!token) return [];
 
-  const url = new URL(GIF_BRIDGE_SEARCH_PATH, window.location.origin);
+  const searchEndpoint = resolveBridgeUrl(GIF_BRIDGE_SEARCH_PATH, info);
+  const url = new URL(searchEndpoint);
   url.searchParams.set('q', query);
   const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) return [];
-  return (await res.json()) as GifSearchResult[];
+
+  const results = (await res.json()) as GifSearchResult[];
+  return results.map((gif) => ({
+    ...gif,
+    thumbUrl: resolveBridgeUrl(gif.thumbUrl, info),
+    fullUrl: resolveBridgeUrl(gif.fullUrl, info),
+  }));
 };
