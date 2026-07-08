@@ -1,5 +1,6 @@
-import { MatrixClient } from 'matrix-js-sdk';
+import { IContent, MatrixClient } from 'matrix-js-sdk';
 import { AutoDiscoveryInfo } from '../cs-api';
+import { GIF_MSGTYPE } from '../../types/matrix/common';
 
 // The gif-bridge is reverse-proxied same-origin (see gitops traefik branch), so
 // plain relative paths avoid CORS entirely.
@@ -37,6 +38,23 @@ export type GifSearchResult = {
   fullUrl: string;
   pageUrl: string;
 };
+
+/**
+ * Builds moe.loaf.gif event content. Everything in it references the bridge,
+ * never giphy.com: the bridge exists to give gifs the same privacy guarantees
+ * as Matrix media, and a giphy link in the fallback body would route viewers
+ * around it. The bridge url is deliberately absolute — events federate to
+ * viewers whose clients have a different bridge (or none), and only the
+ * sender's bridge holds the url record for this gif id. /media is
+ * unauthenticated, so the same url doubles as a working plain link in
+ * clients that don't understand the msgtype.
+ */
+export const getGifMsgContent = (gif: GifSearchResult): IContent => ({
+  msgtype: GIF_MSGTYPE,
+  body: gif.fullUrl,
+  url: gif.fullUrl,
+  info: { w: gif.width, h: gif.height, mimetype: gif.mimetype, size: gif.size },
+});
 
 export const resolveBridgeUrl = (urlStr: string, info?: AutoDiscoveryInfo): string => {
   const customUrl = info?.['moe.loaf.gif']?.api_url;

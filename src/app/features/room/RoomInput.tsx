@@ -96,11 +96,10 @@ import { settingsAtom } from '../../state/settings';
 import {
   getAudioMsgContent,
   getFileMsgContent,
-  getGifMsgContent,
   getImageMsgContent,
   getVideoMsgContent,
 } from './msgContent';
-import { GifSearchResult } from '../../utils/gifBridge';
+import { GifSearchResult, getGifMsgContent } from '../../utils/gifBridge';
 import { getMemberDisplayName, getMentionContent, trimReplyFromBody } from '../../utils/room';
 import { CommandAutocomplete } from './CommandAutocomplete';
 import { Command, SHRUG, TABLEFLIP, UNFLIP, useCommands } from '../../hooks/useCommands';
@@ -449,25 +448,7 @@ export const RoomInput = forwardRef<HTMLDivElement, RoomInputProps>(
     };
 
     const handleGifSelect = (gif: GifSearchResult) => {
-      mx.sendMessage(
-        roomId,
-        getGifMsgContent(
-          {
-            // Deliberately the resolved absolute url: this event federates to
-            // viewers on other homeservers whose clients have a different
-            // bridge (or none), and only the sender's bridge holds the url
-            // record for this gif id — a relative path would resolve against
-            // the wrong origin and 404.
-            bridgeUrl: gif.fullUrl,
-            pageUrl: gif.pageUrl,
-            width: gif.width,
-            height: gif.height,
-            mimetype: gif.mimetype,
-            size: gif.size,
-          },
-          gif.title
-        )
-      );
+      mx.sendMessage(roomId, getGifMsgContent(gif));
     };
 
     return (

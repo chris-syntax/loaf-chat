@@ -92,10 +92,11 @@ export type ILocationContent = {
 export const GIF_MSGTYPE = 'moe.loaf.gif';
 
 // Unlike every other content type in this file, `url` here is NOT an mxc:// URI —
-// it's a plain, unauthenticated HTTPS reference to the gif-bridge's /media/:id
-// endpoint (gif ids are only ever learned via an authenticated /search, so the
-// media endpoint itself needs no gating). `body`/`formatted_body` point at the
-// public Giphy page instead, purely as a nicer fallback link with more context.
+// it's a plain, unauthenticated HTTPS reference to the gif-bridge's media
+// endpoint. `body` carries the same bridge url as a linkifiable fallback for
+// clients that don't understand this msgtype. Nothing in the event may point
+// at giphy.com: the bridge exists to give gifs Matrix-media-grade privacy.
+// format/formatted_body linger only in events sent by older client versions.
 export type IGifContent = {
   msgtype: typeof GIF_MSGTYPE;
   body: string;

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { resolveBridgeUrl } from './gifBridge';
+import { GifSearchResult, getGifMsgContent, resolveBridgeUrl } from './gifBridge';
 import { AutoDiscoveryInfo } from '../cs-api';
 
 const ORIGIN = 'https://chat.loaf.moe';
@@ -44,6 +44,34 @@ describe('resolveBridgeUrl', () => {
     expect(resolveBridgeUrl('/api/gif/search', infoWithApiUrl('not a url'))).toBe(
       '/api/gif/search'
     );
+  });
+});
+
+describe('getGifMsgContent', () => {
+  const gif: GifSearchResult = {
+    id: 'abc123',
+    title: 'Cat GIF',
+    width: 480,
+    height: 270,
+    mimetype: 'image/gif',
+    size: 1048576,
+    thumbUrl: 'https://chat.loaf.moe/api/gif/media/abc123/thumb',
+    fullUrl: 'https://chat.loaf.moe/api/gif/media/abc123/full',
+    pageUrl: 'https://giphy.com/gifs/abc123',
+  };
+
+  it('points body and url at the bridge full rendition', () => {
+    const content = getGifMsgContent(gif);
+    expect(content.msgtype).toBe('moe.loaf.gif');
+    expect(content.body).toBe('https://chat.loaf.moe/api/gif/media/abc123/full');
+    expect(content.url).toBe('https://chat.loaf.moe/api/gif/media/abc123/full');
+    expect(content.info).toEqual({ w: 480, h: 270, mimetype: 'image/gif', size: 1048576 });
+  });
+
+  it('never references giphy.com anywhere in the event', () => {
+    // The bridge is a privacy boundary; a giphy link in the fallback body
+    // would route viewers around it.
+    expect(JSON.stringify(getGifMsgContent(gif))).not.toContain('giphy.com');
   });
 });
 

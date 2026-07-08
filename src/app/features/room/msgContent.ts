@@ -1,7 +1,6 @@
 import { IContent, MatrixClient, MsgType } from 'matrix-js-sdk';
 import to from 'await-to-js';
 import {
-  GIF_MSGTYPE,
   IThumbnailContent,
   MATRIX_BLUR_HASH_PROPERTY_NAME,
   MATRIX_SPOILER_PROPERTY_NAME,
@@ -171,24 +170,3 @@ export const getFileMsgContent = (item: TUploadItem, mxc: string): IContent => {
   return content;
 };
 
-export const getGifMsgContent = (
-  gif: {
-    bridgeUrl: string;
-    pageUrl: string;
-    width?: number;
-    height?: number;
-    mimetype?: string;
-    size?: number;
-  },
-  label: string
-): IContent => ({
-  msgtype: GIF_MSGTYPE,
-  // body/formatted_body link to the *public* Giphy page, not gif.bridgeUrl — the
-  // bridge URL requires a fresh per-viewer auth token, so it's useless as a plain
-  // clickable fallback link for anyone (or any client) not going through MGif.
-  body: `${label}: ${gif.pageUrl}`,
-  format: 'org.matrix.custom.html',
-  formatted_body: `<a href="${gif.pageUrl}">${label}</a>`,
-  url: gif.bridgeUrl,
-  info: { w: gif.width, h: gif.height, mimetype: gif.mimetype, size: gif.size },
-});
