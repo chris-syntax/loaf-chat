@@ -1,4 +1,4 @@
-import React, { CSSProperties, ReactNode } from 'react';
+import React, { CSSProperties, ReactNode, useState } from 'react';
 import { Box, Chip, Icon, Icons, Text, toRem } from 'folds';
 import { IContent } from 'matrix-js-sdk';
 import { JUMBO_EMOJI_REG, URL_REG } from '../../utils/regex';
@@ -227,10 +227,14 @@ type MGifProps = {
 };
 export function MGif({ content, outlined }: MGifProps) {
   const autoDiscoveryInfo = useAutoDiscoveryInfo();
+  // Bridge media can genuinely be gone (messages predating the current
+  // bridge deployment); a text fallback beats a broken image glyph. No
+  // fallback link either — the only meaningful target just failed to load.
+  const [failed, setFailed] = useState(false);
   const gifInfo = content?.info;
   const bridgeUrl = content.url;
 
-  if (typeof bridgeUrl !== 'string') return <BrokenContent />;
+  if (failed || typeof bridgeUrl !== 'string') return <BrokenContent />;
 
   const srcUrl = resolveBridgeUrl(bridgeUrl, autoDiscoveryInfo);
   const height = scaleYDimension(gifInfo?.w || 200, 200, gifInfo?.h || 200);
@@ -248,6 +252,7 @@ export function MGif({ content, outlined }: MGifProps) {
           title={content.body}
           loading="lazy"
           style={{ height: '100%', width: '100%', objectFit: 'contain' }}
+          onError={() => setFailed(true)}
         />
       </AttachmentBox>
     </Attachment>
