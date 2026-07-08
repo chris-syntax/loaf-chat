@@ -453,6 +453,11 @@ export const RoomInput = forwardRef<HTMLDivElement, RoomInputProps>(
         roomId,
         getGifMsgContent(
           {
+            // Deliberately the resolved absolute url: this event federates to
+            // viewers on other homeservers whose clients have a different
+            // bridge (or none), and only the sender's bridge holds the url
+            // record for this gif id — a relative path would resolve against
+            // the wrong origin and 404.
             bridgeUrl: gif.fullUrl,
             pageUrl: gif.pageUrl,
             width: gif.width,
