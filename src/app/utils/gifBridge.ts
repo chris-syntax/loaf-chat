@@ -48,19 +48,26 @@ export const resolveBridgeUrl = (urlStr: string, info?: AutoDiscoveryInfo): stri
   }
 };
 
+/**
+ * Throws on any failure (no token, HTTP error, network/parse error) so the UI
+ * can tell "the bridge is broken" apart from "no gifs matched" — an empty
+ * array here always means a genuinely empty result set. Pass an AbortSignal
+ * to cancel superseded searches; aborts surface as DOMException AbortError.
+ */
 export const searchGifs = async (
   mx: MatrixClient,
   query: string,
-  info?: AutoDiscoveryInfo
+  info?: AutoDiscoveryInfo,
+  signal?: AbortSignal
 ): Promise<GifSearchResult[]> => {
   const token = await getCachedOpenIdToken(mx);
-  if (!token) return [];
+  if (!token) throw new Error('GIF search: could not obtain an OpenID token.');
 
   const searchEndpoint = resolveBridgeUrl(GIF_BRIDGE_SEARCH_PATH, info);
   const url = new URL(searchEndpoint);
   url.searchParams.set('q', query);
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-  if (!res.ok) return [];
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, signal });
+  if (!res.ok) throw new Error(`GIF search failed with status ${res.status}.`);
 
   const results = (await res.json()) as GifSearchResult[];
   return results.map((gif) => ({

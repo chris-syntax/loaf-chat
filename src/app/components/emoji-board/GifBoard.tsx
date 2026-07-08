@@ -1,4 +1,4 @@
-import React, { ChangeEventHandler, useCallback, useState } from 'react';
+import React, { ChangeEventHandler, useCallback, useEffect, useRef, useState } from 'react';
 import { Box, Scroll, Text } from 'folds';
 import { useMatrixClient } from '../../hooks/useMatrixClient';
 import { useAutoDiscoveryInfo } from '../../hooks/useAutoDiscoveryInfo';
@@ -17,17 +17,37 @@ export function GifBoard({ onGifSelect, requestClose }: GifBoardProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<GifSearchResult[]>();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
+  // Searches resolve out of order under fast typing; only the latest
+  // request may touch state, and its predecessor is actively aborted.
+  const abortRef = useRef<AbortController>();
+
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   const runSearch = useCallback(
     async (term: string) => {
+      abortRef.current?.abort();
       if (!term) {
         setResults(undefined);
+        setLoading(false);
+        setError(false);
         return;
       }
+      const controller = new AbortController();
+      abortRef.current = controller;
       setLoading(true);
-      const found = await searchGifs(mx, term, autoDiscoveryInfo);
-      setLoading(false);
-      setResults(found);
+      setError(false);
+      try {
+        const found = await searchGifs(mx, term, autoDiscoveryInfo, controller.signal);
+        if (controller.signal.aborted) return;
+        setResults(found);
+        setLoading(false);
+      } catch {
+        if (controller.signal.aborted) return;
+        setResults(undefined);
+        setLoading(false);
+        setError(true);
+      }
     },
     [mx, autoDiscoveryInfo]
   );
@@ -41,7 +61,9 @@ export function GifBoard({ onGifSelect, requestClose }: GifBoardProps) {
       },
       [runSearch]
     ),
-    { wait: 200 }
+    // Every distinct prefix that fires is a Giphy API call server-side, so
+    // wait for a natural typing pause rather than racing the keystrokes.
+    { wait: 300 }
   );
 
   const handleSelect = (gif: GifSearchResult) => {
@@ -64,7 +86,12 @@ export function GifBoard({ onGifSelect, requestClose }: GifBoardProps) {
               Searching…
             </Text>
           )}
-          {query && !loading && results?.length === 0 && (
+          {query && !loading && error && (
+            <Text size="T300" style={{ padding: '8px' }}>
+              GIF search is unavailable right now. Try again in a moment.
+            </Text>
+          )}
+          {query && !loading && !error && results?.length === 0 && (
             <Text size="T300" style={{ padding: '8px' }}>
               No Results found
             </Text>
