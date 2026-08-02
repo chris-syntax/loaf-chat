@@ -22,6 +22,7 @@ import {
   ElementCallThemeKind,
   ElementMediaStateDetail,
   ElementWidgetActions,
+  ScreenShareQualityDetail,
 } from './types';
 import { CallControl } from './CallControl';
 import { CallControlState } from './CallControlState';
@@ -187,6 +188,15 @@ export class CallEmbed {
         }
         this.control.onMediaState(evt);
       })
+    );
+
+    // Element Call owns and persists the screen share quality caps, and
+    // broadcasts them whenever they change — including on load — so we adopt
+    // whatever it reports.
+    this.disposables.push(
+      this.listenAction<ScreenShareQualityDetail>(ElementWidgetActions.ScreenShareQuality, (evt) =>
+        this.control.onScreenShareQuality(evt)
+      )
     );
 
     this.start();

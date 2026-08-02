@@ -1,13 +1,21 @@
 import { ClientWidgetApi } from 'matrix-widget-api';
 import EventEmitter from 'events';
-import { CallControlState } from './CallControlState';
-import { ElementMediaStateDetail, ElementMediaStatePayload, ElementWidgetActions } from './types';
+import { CallControlSnapshot, CallControlState } from './CallControlState';
+import {
+  ElementMediaStateDetail,
+  ElementMediaStatePayload,
+  ElementWidgetActions,
+  ScreenShareFramerateCap,
+  ScreenShareQualityDetail,
+  ScreenShareQualityPayload,
+  ScreenShareResolutionCap,
+} from './types';
 
 export enum CallControlEvent {
   StateUpdate = 'state_update',
 }
 
-export class CallControl extends EventEmitter implements CallControlState {
+export class CallControl extends EventEmitter implements CallControlSnapshot {
   private state: CallControlState;
 
   private call: ClientWidgetApi;
@@ -106,6 +114,14 @@ export class CallControl extends EventEmitter implements CallControlState {
     return this.state.spotlight;
   }
 
+  public get screenShareResolution(): ScreenShareResolutionCap {
+    return this.state.screenShareResolution;
+  }
+
+  public get screenShareFramerate(): ScreenShareFramerateCap {
+    return this.state.screenShareFramerate;
+  }
+
   public async applyState() {
     await this.setMediaState({
       audio_enabled: this.microphone,
@@ -187,15 +203,10 @@ export class CallControl extends EventEmitter implements CallControlState {
     const { data } = evt.detail;
     if (!data) return;
 
-    const state = new CallControlState(
-      data.audio_enabled ?? this.microphone,
-      data.video_enabled ?? this.video,
-      this.sound,
-      this.screenshare,
-      this.spotlight
-    );
-
-    this.state = state;
+    this.state = this.state.with({
+      microphone: data.audio_enabled,
+      video: data.video_enabled,
+    });
     this.emitStateUpdate();
 
     if (this.microphone && !this.sound) {
@@ -212,13 +223,27 @@ export class CallControl extends EventEmitter implements CallControlState {
     const screenshare: boolean = this.screenshareButton?.getAttribute('data-kind') === 'primary';
     const spotlight: boolean = this.spotlightButton?.checked ?? false;
 
-    this.state = new CallControlState(
-      this.microphone,
-      this.video,
-      this.sound,
-      screenshare,
-      spotlight
-    );
+    this.state = this.state.with({ screenshare, spotlight });
+    this.emitStateUpdate();
+  }
+
+  /**
+   * Chooses new screen share quality caps. Element Call is the authority: it
+   * saves them, applies them to a share already in progress, and reports back
+   * what it settled on.
+   */
+  public setScreenShareQuality(quality: ScreenShareQualityPayload) {
+    return this.call.transport.send(ElementWidgetActions.ScreenShareQuality, quality);
+  }
+
+  public onScreenShareQuality(evt: CustomEvent<ScreenShareQualityDetail>) {
+    const { data } = evt.detail;
+    if (!data) return;
+
+    this.state = this.state.with({
+      screenShareResolution: data.resolution_cap,
+      screenShareFramerate: data.framerate_cap,
+    });
     this.emitStateUpdate();
   }
 
@@ -243,14 +268,7 @@ export class CallControl extends EventEmitter implements CallControlState {
 
     this.setSound(sound);
 
-    const state = new CallControlState(
-      this.microphone,
-      this.video,
-      sound,
-      this.screenshare,
-      this.spotlight
-    );
-    this.state = state;
+    this.state = this.state.with({ sound });
     this.emitStateUpdate();
 
     if (!this.sound && this.microphone) {
