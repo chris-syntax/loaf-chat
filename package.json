@@ -91,7 +91,7 @@
     "ua-parser-js": "1.0.35"
   },
   "devDependencies": {
-    "@element-hq/element-call-embedded": "0.20.1",
+    "@element-hq/element-call-embedded": "file:vendor/element-call-embedded-c347bc0c.tgz",
     "@esbuild-plugins/node-globals-polyfill": "0.2.3",
     "@rollup/plugin-inject": "5.0.3",
     "@rollup/plugin-wasm": "6.1.1",

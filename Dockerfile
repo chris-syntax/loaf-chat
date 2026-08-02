@@ -4,6 +4,9 @@ FROM node:24.13.1-alpine AS builder
 WORKDIR /src
 
 COPY .npmrc package.json package-lock.json /src/
+# element-call is a vendored tarball rather than a registry package, so it has
+# to be present before `npm ci` can resolve the file: dependency.
+COPY vendor /src/vendor
 RUN npm ci
 COPY . /src/
 ENV NODE_OPTIONS=--max_old_space_size=4096
