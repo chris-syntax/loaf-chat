@@ -22,6 +22,7 @@ import {
   ControlDivider,
   MicrophoneButton,
   ScreenShareButton,
+  ScreenShareQualityButton,
   SoundButton,
   VideoButton,
 } from './Controls';
@@ -46,9 +47,15 @@ export function CallControls({ callEmbed }: CallControlsProps) {
     useCallback(() => controlRef.current, [])
   );
 
-  const { microphone, video, sound, screenshare, spotlight } = useCallControlState(
-    callEmbed.control
-  );
+  const {
+    microphone,
+    video,
+    sound,
+    screenshare,
+    spotlight,
+    screenShareResolution,
+    screenShareFramerate,
+  } = useCallControlState(callEmbed.control);
 
   const [cords, setCords] = useState<RectCords>();
 
@@ -109,6 +116,11 @@ export function CallControls({ callEmbed }: CallControlsProps) {
             <ScreenShareButton
               enabled={screenshare}
               onToggle={() => callEmbed.control.toggleScreenshare()}
+            />
+            <ScreenShareQualityButton
+              resolution={screenShareResolution}
+              framerate={screenShareFramerate}
+              onSelect={(quality) => callEmbed.control.setScreenShareQuality(quality)}
             />
           </Box>
         </Box>
