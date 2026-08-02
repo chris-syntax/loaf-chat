@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+#MISE description="Build the element-call fork and vendor it as the element-call-embedded dependency"
+#
+# loaf-chat serves element-call from its own origin: vite.config.js copies
+# node_modules/@element-hq/element-call-embedded/dist/* into
+# dist/public/element-call/, and CallEmbed points an iframe at it.
+#
+# Upstream ships that package on npm. To run our own fork instead we build it,
+# pack it into a tarball, and depend on that tarball by path. The tarball has to
+# be committed, because the Docker builder only ever sees this repo.
+#
+# The filename carries element-call's git revision. That is not cosmetic: npm
+# resolves `file:` dependencies by path, so reusing a filename lets a stale
+# tarball survive an install. A revision-stamped name makes that impossible.
+
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+LOAF_DIR="$PWD"
+VENDOR_DIR="$LOAF_DIR/vendor"
+PACKAGE="@element-hq/element-call-embedded"
+
+ec_dir="${ELEMENT_CALL_DIR:-$LOAF_DIR/../element-call}"
+if [[ ! -f "$ec_dir/package.json" ]]; then
+  echo "error: no element-call checkout at $ec_dir" >&2
+  echo "       set ELEMENT_CALL_DIR to point at your fork" >&2
+  exit 1
+fi
+ec_dir="$(cd "$ec_dir" && pwd)"
+
+# Identify the build by element-call's git revision. A dirty tree can't be
+# identified by revision alone, so stamp it with a timestamp to guarantee a
+# fresh filename — uncommitted work should never reuse a name.
+rev="$(git -C "$ec_dir" rev-parse --short HEAD)"
+if [[ -n "$(git -C "$ec_dir" status --porcelain)" ]]; then
+  rev="$rev-dirty-$(date -u +%Y%m%d%H%M%S)"
+  echo "note: $ec_dir has uncommitted changes; stamping build as $rev"
+fi
+
+echo "==> Building element-call ($rev)"
+rm -f "$ec_dir"/element-hq-element-call-embedded-*.tgz
+(cd "$ec_dir" && mise x -- pnpm pack:embedded >/dev/null)
+
+shopt -s nullglob
+built=("$ec_dir"/element-hq-element-call-embedded-*.tgz)
+shopt -u nullglob
+if [[ ${#built[@]} -ne 1 ]]; then
+  echo "error: expected exactly one packed tarball, found ${#built[@]}" >&2
+  exit 1
+fi
+
+tarball="element-call-embedded-$rev.tgz"
+echo "==> Vendoring $tarball"
+mkdir -p "$VENDOR_DIR"
+# Drop every previous build: keeping them would bloat the repo and leave it
+# ambiguous which one package.json refers to.
+rm -f "$VENDOR_DIR"/element-call-embedded-*.tgz \
+      "$VENDOR_DIR"/element-hq-element-call-embedded-*.tgz
+mv "${built[0]}" "$VENDOR_DIR/$tarball"
+
+echo "==> Pointing $PACKAGE at vendor/$tarball"
+PACKAGE="$PACKAGE" TARBALL="$tarball" node - <<'NODE'
+const fs = require("node:fs");
+const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+const name = process.env.PACKAGE;
+const section = ["devDependencies", "dependencies"].find((s) => pkg[s]?.[name]);
+if (!section) throw new Error(`${name} is not a dependency of loaf-chat`);
+pkg[section][name] = `file:vendor/${process.env.TARBALL}`;
+fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
+NODE
+
+# npm layers a file: tarball over whatever is already unpacked, so old hashed
+# assets linger and it stops being obvious what is actually installed.
+echo "==> Reinstalling"
+rm -rf "$LOAF_DIR/node_modules/$PACKAGE"
+mise x -- npm install --silent
+
+echo
+echo "Vendored vendor/$tarball"
+echo "Commit vendor/, package.json and package-lock.json together."

@@ -1,0 +1,10 @@
+[tools]
+# Matches .node-version, so `mise x -- npm ...` and the Docker builder agree.
+node = "24.13.1"
+# Needed only to build element-call, which is a pnpm project.
+pnpm = "11.6.0"
+
+[env]
+# Where the element-call fork lives. Override per-machine with
+# `mise set ELEMENT_CALL_DIR=/path/to/element-call`.
+ELEMENT_CALL_DIR = "{{config_root}}/../element-call"
