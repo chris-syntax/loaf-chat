@@ -1,4 +1,4 @@
-const { app, BrowserWindow, net, protocol, session } = require('electron');
+const { app, BrowserWindow, desktopCapturer, net, protocol, session } = require('electron');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { resolveRequestPath } = require('./resolve');
@@ -75,6 +75,22 @@ app.whenReady().then(() => {
     // the top-level URL rather than denying and breaking calls.
     const requestingUrl = details?.requestingUrl ?? contents.getURL();
     callback(allowed.has(permission) && requestingUrl.startsWith(ORIGIN));
+  });
+
+  // element-call calls getDisplayMedia() from inside its iframe; Electron asks
+  // the main process which source to hand back. There is no picker yet, so
+  // take the primary screen. A source picker window is the follow-up here.
+  session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
+    desktopCapturer
+      .getSources({ types: ['screen'] })
+      .then((sources) => {
+        if (sources.length === 0) {
+          callback({});
+          return;
+        }
+        callback({ video: sources[0] });
+      })
+      .catch(() => callback({}));
   });
 
   createWindow();
