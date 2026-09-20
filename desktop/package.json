@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "description": "Electron shell for Loaf Chat",
+  "author": "Chris Thomas <me@cthomas.dev>",
+  "homepage": "https://loaf.moe",
   "type": "commonjs",
   "main": "main.js",
   "scripts": {
