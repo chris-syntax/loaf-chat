@@ -151,9 +151,16 @@ otherwise only discovered by a user who never gets updated.
 
 Tag a semver prerelease, e.g. `desktop-v0.2.0-beta.1`. The same workflow
 publishes the same artifacts, so the `.exe` is downloadable by anyone with
-the link, but electron-updater will not offer it to clients on a stable build
-because `allowPrerelease` is off by default. This is the test channel; no
-extra machinery is built for one.
+the link. `allowPrerelease` is irrelevant here — it only controls which tag
+electron-updater walks out of the Atom feed, and the default path never
+consults that feed for version selection. What actually protects a stable
+client is that the release itself is flagged prerelease on GitHub: the
+default channel resolves through `/releases/latest`, which filters on that
+flag, not on the version string. The workflow derives the flag from the tag
+(`TAG` after stripping `desktop-v`, prerelease if it contains a `-`) and sets
+`EP_PRE_RELEASE` accordingly, so a `-beta` release never becomes "latest" and
+a stable client is never offered it. This is the test channel; no extra
+machinery is built for one.
 
 ## Out of scope
 
@@ -174,6 +181,48 @@ in-app update UI, and update telemetry.
    pinned `artifactName` is believed to make it a non-issue. Confirm during
    verification that after a real AppImage self-update the entry still points
    at a working binary.
+4. **The published release tag is `v<version>`, not the pushed
+   `desktop-v<version>`.** electron-builder derives the release tag from the
+   package version, so pushing `desktop-v0.2.0` creates a release tagged
+   `v0.2.0`, and because that tag does not exist GitHub creates it on the
+   default branch. Updates still work — the client reads `tag_name` back out
+   of the release. Setting `tagNamePrefix: "desktop-v"` would make them match
+   but silently breaks beta-to-beta updating, because electron-updater's
+   prerelease path calls `semver.valid()` on the tag and
+   `desktop-v0.2.0-beta.2` is not valid semver (a bare `v` prefix is the only
+   one it accepts). Deliberately left at the default.
+5. **The updater assumes this repository's latest GitHub release is always a
+   desktop release.** electron-updater asks for `/releases/latest`
+   repository-wide with no tag filter. If a web release is ever published
+   from this repo, every installed desktop client will fetch its
+   `latest-linux.yml`, 404, and log `ERR_UPDATER_CHANNEL_FILE_NOT_FOUND` every
+   six hours — silently, forever. The mitigation is operational: desktop
+   releases and web releases cannot share this repository's release list.
+   Note also that `.github/workflows/prod-deploy.yml` triggers on
+   `release: [published]`; this is currently inert because GitHub does not
+   start workflow runs from events created with the default `GITHUB_TOKEN`,
+   but swapping in a PAT would turn a desktop tag into a production web
+   deploy.
+6. **The AppImage relaunch races the single-instance lock.**
+   `quitAndInstall()` spawns the new AppImage before the old process exits,
+   and the new process calls `app.requestSingleInstanceLock()` at
+   `desktop/main.js:45` and quits outright if the old one still holds it. The
+   old process almost certainly exits faster than a cold Electron boot, so
+   this probably never fires — but if success criterion 4 fails
+   intermittently during verification, this is the cause, and the fix is a
+   short retry around the lock rather than anything in the updater.
+7. **Linux arm64 has no update feed.** An arm64 client would request
+   `latest-linux-arm64.yml`; the CI matrix is x64 only. Harmless while no
+   arm64 AppImage is shipped.
+8. **Concurrent publishing can fail one matrix leg.** Both matrix jobs call
+   electron-builder's `getOrCreateRelease`; if both list releases before
+   either creates one, both POST and the loser gets an uncaught 422. Note
+   explicitly that electron-builder's `already_exists` handling is on asset
+   *upload* only — `createRelease()` has no such catch — so do not assume it
+   self-heals. `fail-fast: false` preserves the other artifact and re-running
+   the failed job succeeds because the release then exists. Accepted rather
+   than serialised with `max-parallel: 1`, because the failure is loud and
+   re-runnable.
 
 ## Success criteria
 
