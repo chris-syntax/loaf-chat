@@ -46,7 +46,7 @@ export function About({ requestClose }: AboutProps) {
                   <Box direction="Column" gap="100">
                     <Box gap="100" alignItems="End">
                       <Text size="H3">Loaf Chat</Text>
-                      <Text size="T200">v4.12.3.1</Text>
+                      <Text size="T200">v4.12.7.1</Text>
                     </Box>
                   </Box>
 
