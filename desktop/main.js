@@ -137,7 +137,7 @@ function createWindow() {
   // in a window with no back button and no visible menu — an unrecoverable
   // state. Only our own origin may drive top-level navigation.
   window.webContents.on('will-navigate', (event, url) => {
-    if (!url.startsWith(ORIGIN)) {
+    if (!url.startsWith(`${ORIGIN}/`)) {
       event.preventDefault();
       if (url.startsWith('https://') || url.startsWith('http://')) {
         shell.openExternal(url);
@@ -148,6 +148,12 @@ function createWindow() {
   // Cold start with a loaf:// callback URL already in argv (Linux/Windows),
   // or one that arrived via open-url before this window existed (macOS):
   // load it instead of the default origin.
+  //
+  // argvUrl is recomputed here on every createWindow() call, including from
+  // the macOS 'activate' handler below — harmless today only because argv
+  // does not change after launch and macOS never reaches this branch anyway
+  // (it delivers URLs via open-url, not argv). If that ever changes, this
+  // would silently reload a stale login URL on reactivation.
   const argvUrl = process.argv.find((arg) => arg.startsWith(`${ORIGIN}/`));
   const initialUrl = pendingOpenUrl || argvUrl;
   pendingOpenUrl = null;
@@ -172,7 +178,7 @@ app.whenReady().then(() => {
     // omits it for requests not made on behalf of a document, so fall back to
     // the top-level URL rather than denying and breaking calls.
     const requestingUrl = details?.requestingUrl ?? contents.getURL();
-    callback(allowed.has(permission) && requestingUrl.startsWith(ORIGIN));
+    callback(allowed.has(permission) && requestingUrl.startsWith(`${ORIGIN}/`));
   });
 
   // element-call calls getDisplayMedia() from inside its iframe; Electron asks
