@@ -2,6 +2,7 @@ const { app, BrowserWindow, desktopCapturer, net, protocol, session, shell } = r
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { resolveRequestPath } = require('./resolve');
+const { ensureDesktopEntry } = require('./linux-protocol');
 
 // Where the web build lives. In development we read the dist/ the repo's own
 // `npm run build` produced; when packaged, electron-builder copies it into the
@@ -10,7 +11,7 @@ const DIST = app.isPackaged
   ? path.join(process.resourcesPath, 'dist')
   : path.join(__dirname, '..', 'dist');
 
-const ORIGIN = 'app://loaf';
+const ORIGIN = 'loaf://chat';
 
 // MUST run before app.whenReady(). Afterwards it is silently ignored.
 //
@@ -25,7 +26,7 @@ const ORIGIN = 'app://loaf';
 //                        and image in the client 401s.
 protocol.registerSchemesAsPrivileged([
   {
-    scheme: 'app',
+    scheme: 'loaf',
     privileges: {
       standard: true,
       secure: true,
@@ -34,6 +35,64 @@ protocol.registerSchemesAsPrivileged([
     },
   },
 ]);
+
+// Only one instance may hold the window that SSO redirects back into. Without
+// this, the OS launching us a second time (Linux/Windows deliver the loaf://
+// callback by starting a new process with the URL in argv) would open a
+// second window and the login token would land in the process nobody is
+// looking at.
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+  return;
+}
+
+let mainWindow = null;
+// Set when a loaf:// URL arrives before a window exists (macOS can fire
+// open-url before app is ready).
+let pendingOpenUrl = null;
+
+// Validates the URL is our own origin and loads it into the running window.
+// An OS hands us whatever string the requester used with our scheme; without
+// this check that string would become an open redirect into arbitrary
+// content inside a window that has camera and microphone permissions.
+function deliverUrl(url) {
+  if (!url.startsWith(`${ORIGIN}/`)) return;
+  if (!mainWindow) {
+    pendingOpenUrl = url;
+    return;
+  }
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.loadURL(url);
+  mainWindow.focus();
+}
+
+// Register in dev with the exec path and script argument, otherwise Electron
+// registers itself as the default handler, not this script.
+if (app.isPackaged) {
+  app.setAsDefaultProtocolClient('loaf');
+} else {
+  app.setAsDefaultProtocolClient('loaf', process.execPath, [path.resolve(process.argv[1])]);
+}
+
+// macOS delivers the URL via this event, not argv. Register at module top
+// level because it can fire before the app is ready.
+app.on('open-url', (event, url) => {
+  event.preventDefault();
+  deliverUrl(url);
+});
+
+// Linux/Windows: the OS starts a new process with the URL in argv. That
+// process loses the single-instance lock above, which fires this event in
+// the original process instead.
+app.on('second-instance', (event, argv) => {
+  const url = argv.find((arg) => arg.startsWith(`${ORIGIN}/`));
+  if (url) {
+    deliverUrl(url);
+  } else if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+  }
+});
 
 function serve(request) {
   const relative = resolveRequestPath(new URL(request.url).pathname);
@@ -56,6 +115,11 @@ function createWindow() {
     minHeight: 400,
     backgroundColor: '#000000',
     autoHideMenuBar: true,
+  });
+
+  mainWindow = window;
+  window.on('closed', () => {
+    if (mainWindow === window) mainWindow = null;
   });
 
   // Electron denies window.open() by default, and the web app renders every
@@ -81,12 +145,23 @@ function createWindow() {
     }
   });
 
-  window.loadURL(`${ORIGIN}/`);
+  // Cold start with a loaf:// callback URL already in argv (Linux/Windows),
+  // or one that arrived via open-url before this window existed (macOS):
+  // load it instead of the default origin.
+  const argvUrl = process.argv.find((arg) => arg.startsWith(`${ORIGIN}/`));
+  const initialUrl = pendingOpenUrl || argvUrl;
+  pendingOpenUrl = null;
+
+  window.loadURL(initialUrl && initialUrl.startsWith(`${ORIGIN}/`) ? initialUrl : `${ORIGIN}/`);
   return window;
 }
 
 app.whenReady().then(() => {
-  protocol.handle('app', serve);
+  protocol.handle('loaf', serve);
+
+  // AppImages install no .desktop file, so without this the OS never learns
+  // the loaf:// scheme belongs to us. No-op on non-Linux and on deb/dev runs.
+  ensureDesktopEntry();
 
   // Electron grants permissions by default. Narrow that to what the app
   // actually needs, and only from our own origin.

@@ -25,12 +25,19 @@
     "files": [
       "main.js",
       "resolve.js",
+      "linux-protocol.js",
       "package.json"
     ],
     "extraResources": [
       {
         "from": "../dist",
         "to": "dist"
+      }
+    ],
+    "protocols": [
+      {
+        "name": "Loaf Chat",
+        "schemes": ["loaf"]
       }
     ],
     "win": {
