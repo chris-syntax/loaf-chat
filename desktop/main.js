@@ -3,6 +3,7 @@ const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { resolveRequestPath } = require('./resolve');
 const { ensureDesktopEntry } = require('./linux-protocol');
+const { initAutoUpdate } = require('./updater');
 
 // Where the web build lives. In development we read the dist/ the repo's own
 // `npm run build` produced; when packaged, electron-builder copies it into the
@@ -198,6 +199,11 @@ app.whenReady().then(() => {
   });
 
   createWindow();
+
+  // Guards itself: no-ops in dev, on macOS, and on any Linux run that is not
+  // an AppImage. Called after the window exists so the update dialog can
+  // never precede it.
+  initAutoUpdate();
 
   // macOS keeps the app alive with no windows; recreate one when re-activated.
   app.on('activate', () => {

@@ -37,7 +37,9 @@
     "protocols": [
       {
         "name": "Loaf Chat",
-        "schemes": ["loaf"]
+        "schemes": [
+          "loaf"
+        ]
       }
     ],
     "win": {
@@ -58,5 +60,8 @@
       ],
       "category": "Network"
     }
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9"
   }
 }
