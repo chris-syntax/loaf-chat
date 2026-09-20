@@ -61,10 +61,12 @@ jobs:
     needs: build-web
     runs-on: ${{ matrix.os }}
     strategy:
-      # A Windows failure must not throw away a good Linux artifact.
+      # A failure on one platform must not throw away another's good artifact.
       fail-fast: false
+      # macos-latest is Apple Silicon, which is the only architecture the mac
+      # block in desktop/package.json builds for.
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -86,8 +88,48 @@ jobs:
         working-directory: desktop
         run: npm ci
       - name: Package and publish
+        if: runner.os != 'macOS'
         working-directory: desktop
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           EP_PRE_RELEASE: ${{ needs.build-web.outputs.prerelease }}
         run: npx electron-builder --publish always
+      # The signing and notarization credentials are scoped to this step rather
+      # than shared with the one above. CSC_LINK is not a macOS-only variable —
+      # electron-builder reads it on Windows for Authenticode as well, and
+      # getCscLink() treats an empty string as a value rather than as unset, so
+      # there is no way to expose these to a shared step and have the Windows
+      # runner ignore them. It would try to sign the NSIS installer with a
+      # Developer ID certificate and fail the build.
+      - name: Package and publish (macOS)
+        if: runner.os == 'macOS'
+        working-directory: desktop
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EP_PRE_RELEASE: ${{ needs.build-web.outputs.prerelease }}
+          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          APPLE_API_KEY_B64: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          # A missing secret otherwise surfaces as a keychain or notarytool
+          # error deep inside electron-builder, or — worse — as a published
+          # release that installs and then never updates, because Squirrel.Mac
+          # silently refuses an unsigned bundle.
+          for var in CSC_LINK CSC_KEY_PASSWORD APPLE_API_KEY_B64 APPLE_API_KEY_ID APPLE_API_ISSUER APPLE_TEAM_ID; do
+            if [ -z "${!var}" ]; then
+              echo "Repository secret for ${var} is missing or empty" >&2
+              exit 1
+            fi
+          done
+          # @electron/notarize hands APPLE_API_KEY to `notarytool --key`, which
+          # wants the path to the .p8 file and not its contents. The secret
+          # holds base64 because the key is multi-line PEM, so decode it to a
+          # file that leaves with the runner.
+          KEY_DIR="$(mktemp -d)"
+          trap 'rm -rf "${KEY_DIR}"' EXIT
+          printf '%s' "${APPLE_API_KEY_B64}" | base64 --decode > "${KEY_DIR}/AuthKey.p8"
+          export APPLE_API_KEY="${KEY_DIR}/AuthKey.p8"
+          npx electron-builder --publish always

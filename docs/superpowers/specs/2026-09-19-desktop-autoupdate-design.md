@@ -19,7 +19,7 @@ own updates, on the two platforms we actually ship.
 | Linux AppImage | yes | yes, electron-updater (zsync) |
 | Windows NSIS | yes | yes, electron-updater |
 | Linux `.deb` | **no — dropped** | n/a |
-| macOS DMG | not built in CI | no |
+| macOS DMG (arm64) | yes | yes, electron-updater (Squirrel.Mac) |
 
 ### Why the two exclusions
 
@@ -33,11 +33,12 @@ The `author` field in `desktop/package.json` was added for deb packaging
 (commit cedba7c). It stays — electron-builder is happier with it present and
 removing it is churn for no gain.
 
-**macOS is blocked, not deferred by preference.** Squirrel.Mac refuses
-unsigned updates and no configuration works around it; it needs an Apple
-Developer Program membership first. The `mac` build block stays in
-`desktop/package.json` — it costs nothing and a Mac is available if that
-changes — but CI does not build it and the updater refuses to run on darwin.
+**macOS was blocked, not deferred by preference — and is now unblocked.**
+Squirrel.Mac refuses unsigned updates and no configuration works around it;
+it needed an Apple Developer Program membership first. That membership was
+bought on 2026-09-20, so macOS now builds in CI, ships signed and notarized,
+and auto-updates like the other two. See "macOS signing and notarization"
+below. Only the exclusion of `.deb` survives from this section.
 
 ## Architecture
 
@@ -57,13 +58,16 @@ dialog rather than in-app UI.
 ```js
 if (!app.isPackaged) return;                                        // dev runs
 if (process.platform === 'linux' && !process.env.APPIMAGE) return;  // unpacked
-if (process.platform === 'darwin') return;                          // unsigned
 ```
 
 Each one prevents electron-updater from throwing on a configuration where it
 cannot work. The Linux guard now covers only "someone extracted the AppImage
 and ran the binary directly", but it is one line and it is what makes the
 "inert everywhere else" claim true.
+
+A third guard, `if (process.platform === 'darwin') return;`, was removed on
+2026-09-20 when signing landed. It was never about macOS being unsupported —
+it was about the build being unsigned.
 
 **Check cadence:** once at startup, then every 6 hours on a `setInterval`. A
 chat client stays open for days; checking only at launch means a machine that
@@ -96,6 +100,49 @@ Pinning the filename means the path cannot change, so the question of exactly
 how electron-updater handles a renamed AppImage never has to be answered, and
 `linux-protocol.js` needs no changes at all.
 
+### macOS signing and notarization
+
+Added 2026-09-20. Four details decide whether a macOS build works, and three
+of them fail silently.
+
+**The ZIP target is not optional.** `mac.target` must list both `dmg` and
+`zip`. electron-builder's own `MacConfiguration` docs put it plainly:
+"Squirrel.Mac auto update mechanism requires both `dmg` and `zip` to be
+enabled, even when only `dmg` is used." electron-updater installs from the
+ZIP; the DMG is only the thing a human downloads. A `dmg`-only config
+produces a release that installs fine and never updates.
+
+**Entitlements replace, they do not merge.** electron-builder uses
+`build/entitlements.mac.plist` *instead of* its built-in template when the
+file exists (`getEntitlements` in app-builder-lib's `MacTargetHelper`), so
+`desktop/build/entitlements.mac.plist` restates the three Electron runtime
+entitlements — `allow-jit`, `allow-unsigned-executable-memory`,
+`disable-library-validation`. Omitting them yields an app that is correctly
+signed, correctly notarized, and crashes on launch. Helper processes are
+unaffected: they resolve `entitlements.mac.inherit.plist`, which we do not
+ship, so they keep the template.
+
+**Camera and microphone need entitlements, not just usage strings.** The
+hardened runtime is on by default for non-MAS builds and is required for
+notarization. The `NSCameraUsageDescription` and `NSMicrophoneUsageDescription`
+keys in `mac.extendInfo` only supply the text of the TCC prompt — the
+`com.apple.security.device.camera` and `.audio-input` entitlements are what
+let the process open the devices. Without them a call connects and carries no
+audio or video, which reads as a broken app rather than a packaging mistake.
+
+**`APPLE_API_KEY` is a path, not a key.** electron-builder forwards it to
+`@electron/notarize`, which passes it to `notarytool --key`. The CI step
+therefore keeps the base64 of the `.p8` in a differently-named secret and
+decodes it to a temporary file. The published docs describe this variable as
+holding base64 content; the source does not agree, and the source wins.
+
+The mac credentials live on their own workflow step. `CSC_LINK` is read on
+Windows too, for Authenticode, and `getCscLink()` treats an empty string as a
+value rather than as unset — so there is no way to hand these to a shared
+step and have the Windows runner ignore them.
+
+macOS is arm64 only. Intel Macs are not served.
+
 ### Publish configuration
 
 ```json
@@ -124,17 +171,23 @@ matching `desktop-v*`.
 repository root, upload `dist/` as an artifact. This is the same recipe as
 `build-pull-request.yml`, which is known to work.
 
-**Job 2 — `package` (matrix: ubuntu-latest, windows-latest).** Download the
-`dist/` artifact, `npm ci` inside `desktop/` only, then
+**Job 2 — `package` (matrix: ubuntu-latest, windows-latest, macos-latest).**
+Download the `dist/` artifact, `npm ci` inside `desktop/` only, then
 `npx electron-builder --publish always` with
-`GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}`.
+`GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}`. `macos-latest` is Apple Silicon,
+which is the only architecture the mac block builds for.
 
-Building the web app once on Linux and handing the output to both runners is
-deliberate: the Windows runner never touches the root manifest, so the web
-build's toolchain assumptions cannot break the Windows package. It is also
+Building the web app once on Linux and handing the output to every runner is
+deliberate: the Windows and macOS runners never touch the root manifest, so
+the web build's toolchain assumptions cannot break their packages. It is also
 faster.
 
-No new secret is required — the default `GITHUB_TOKEN` has `contents: write`.
+Linux and Windows need no secret — the default `GITHUB_TOKEN` has
+`contents: write`. macOS publishes from a separate step that additionally
+requires `MAC_CSC_LINK`, `MAC_CSC_KEY_PASSWORD`, `APPLE_API_KEY`,
+`APPLE_API_KEY_ID`, `APPLE_API_ISSUER` and `APPLE_TEAM_ID`. That step fails
+fast with the missing variable's name if any is unset, because the
+alternative is a release that installs and then never updates.
 
 ### Version scheme
 
@@ -247,22 +300,27 @@ in-app update UI, and update telemetry.
 7. **Linux arm64 has no update feed.** An arm64 client would request
    `latest-linux-arm64.yml`; the CI matrix is x64 only. Harmless while no
    arm64 AppImage is shipped.
-8. **Concurrent publishing can fail one matrix leg.** Both matrix jobs call
-   electron-builder's `getOrCreateRelease`; if both list releases before
-   either creates one, both POST and the loser gets an uncaught 422. Note
-   explicitly that electron-builder's `already_exists` handling is on asset
-   *upload* only — `createRelease()` has no such catch — so do not assume it
-   self-heals. `fail-fast: false` preserves the other artifact and re-running
-   the failed job succeeds because the release then exists. Accepted rather
-   than serialised with `max-parallel: 1`, because the failure is loud and
-   re-runnable.
+8. **Concurrent publishing can fail one matrix leg.** All three matrix jobs
+   call electron-builder's `getOrCreateRelease`; if several list releases
+   before any creates one, each POSTs and the losers get an uncaught 422.
+   Note explicitly that electron-builder's `already_exists` handling is on
+   asset *upload* only — `createRelease()` has no such catch — so do not
+   assume it self-heals. `fail-fast: false` preserves the other artifacts and
+   re-running the failed job succeeds because the release then exists.
+   Accepted rather than serialised with `max-parallel: 1`, because the
+   failure is loud and re-runnable. Adding the macOS leg widens this window:
+   three racers rather than two, and the macOS leg is much the slowest
+   because notarization blocks on Apple, so in practice it arrives last and
+   finds the release already made.
 
 ## Success criteria
 
 Ordered; each depends on the previous.
 
 1. `desktop-v*` tag produces a GitHub Release containing an AppImage, a
-   Windows `.exe`, `latest.yml` and `latest-linux.yml`, not as a draft.
+   Windows `.exe`, a macOS `.dmg` **and** `.zip`, plus `latest.yml`,
+   `latest-linux.yml` and `latest-mac.yml`, not as a draft. A missing
+   `.zip` or `latest-mac.yml` means macOS will never update.
 2. A mismatched tag/version fails the workflow instead of publishing.
 3. A running AppImage from release N detects release N+1 and shows the
    restart dialog.
@@ -272,7 +330,19 @@ Ordered; each depends on the previous.
 6. The same detect/install/relaunch cycle works on Windows.
 7. A `-beta` tagged release is **not** offered to a client running a stable
    build.
+8. Added 2026-09-20 for macOS: the downloaded DMG opens with no Gatekeeper
+   warning on a machine that has never seen the app — `spctl -a -vvv -t
+   install` on the mounted app reports `accepted` / `Notarized Developer
+   ID`, and `stapler validate` succeeds.
+9. A voice and a video call both carry audio and video in the **signed**
+   build specifically. The hardened runtime is what makes this a separate
+   criterion: an unsigned local build exercises none of the entitlements,
+   so this cannot be inferred from development testing.
+10. The same detect/install/relaunch cycle works on macOS.
 
-**Verification cannot be delegated to a subagent.** Criteria 3-7 require two
+**Verification cannot be delegated to a subagent.** Criteria 3-10 require two
 real releases and a human watching a window. Any implementing agent reports
-them as NOT VERIFIED.
+them as NOT VERIFIED. Criteria 8 and 9 are the exception worth attempting
+locally first: a Mac is the development machine, so `npx electron-builder
+--mac` with the certificate in the login keychain proves the signature, the
+notarization and the call path without spending a release on it.

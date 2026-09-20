@@ -12,10 +12,12 @@ working voice, video and screen sharing.
 
 - **iOS.** Descoped for now. See "Why iOS is not here" below — the blocker is
   recorded so the next person does not rediscover it.
-- **Code signing.** No Apple Developer Program membership and no Windows
-  Authenticode certificate exist yet. First builds ship unsigned.
+- **Code signing.** Partly superseded (2026-09-20). An Apple Developer
+  Program membership now exists and macOS builds are signed with a Developer
+  ID Application certificate and notarized. No Windows Authenticode
+  certificate exists yet, so NSIS installers still ship unsigned.
 - **Auto-update.** Superseded — see `2026-09-19-desktop-autoupdate-design.md`.
-  AppImage and Windows do auto-update; macOS remains blocked on signing.
+  AppImage, Windows and macOS all auto-update.
 - **Changes to `src/`.** This is packaging work. The web app is already
   correct for this target.
 
@@ -155,11 +157,16 @@ Expect this during testing rather than debugging it as a bug.
 ### Packaging
 
 electron-builder, targeting NSIS (Windows), DMG (macOS), AppImage and deb
-(Linux). Set `"identity": null` for macOS to skip signing outright rather than
-failing on a missing certificate.
+(Linux).
+
+> Superseded (2026-09-20). `"identity": null` has been removed: macOS builds
+> are signed and notarized, and the DMG ships alongside a ZIP because
+> Squirrel.Mac installs updates only from the ZIP. macOS is arm64 only. See
+> "macOS signing and notarization" in
+> `2026-09-19-desktop-autoupdate-design.md`.
 
 Unsigned builds warn on first launch: SmartScreen on Windows, right-click-open
-on macOS. Accepted for now; revisit when certificates exist.
+on macOS. This still applies to Windows; revisit when a certificate exists.
 
 Build locally first on all three platforms. Add CI only once the local build
 is known good — a GitHub Actions matrix debugging a build that has never
@@ -216,6 +223,6 @@ Recorded when the Linux implementation landed.
 
 **The screen-share picker.** The handler returns whichever screen `desktopCapturer` lists first. On a multi-monitor machine there is no way to pick another, and a failed `getSources()` surfaces only as a rejected promise with no UI. Both are the picker's job.
 
-**macOS and Windows builds.** Only AppImage and deb are built. The `mac` and `win` blocks in `desktop/package.json` are configuration for later. macOS is the more likely to surprise: the Screen Recording permission prompt and the two `Info.plist` usage-description keys are paths nothing on Linux exercises.
+**macOS and Windows builds.** Resolved (2026-09-20): all three platforms build and publish in CI. The macOS surprises this entry predicted are real and now handled — see the entitlements note in `2026-09-19-desktop-autoupdate-design.md`. The Screen Recording permission prompt remains a first-run, grant-in-System-Settings step that nothing on Linux exercises.
 
 **`setPermissionCheckHandler` is not implemented**, only `setPermissionRequestHandler`. Electron consults the check handler for some programmatic queries such as `navigator.permissions.query()`, and it defaults to permissive. It is not on the path `getUserMedia` or `getDisplayMedia` take, so calls are unaffected.

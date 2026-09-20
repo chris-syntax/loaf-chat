@@ -200,8 +200,8 @@ app.whenReady().then(() => {
 
   createWindow();
 
-  // Guards itself: no-ops in dev, on macOS, and on any Linux run that is not
-  // an AppImage. Called after the window exists so the update dialog can
+  // Guards itself: no-ops in dev and on any Linux run that is not an
+  // AppImage. Called after the window exists so the update dialog can
   // never precede it.
   initAutoUpdate();
 

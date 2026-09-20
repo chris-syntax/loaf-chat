@@ -30,11 +30,13 @@ describe('shouldAutoUpdate', () => {
     ).toBe(false);
   });
 
-  it('never runs on macOS', () => {
-    // Squirrel.Mac refuses unsigned updates and no configuration works
-    // around it. Attempting a check surfaces an error to no purpose.
+  it('runs on packaged macOS', () => {
+    // Squirrel.Mac validates the signature on every update it installs, so
+    // this was false for as long as the DMG shipped unsigned. Builds are now
+    // signed with a Developer ID certificate and notarized, which is the only
+    // thing that was ever blocking it.
     expect(
       shouldAutoUpdate({ isPackaged: true, platform: 'darwin', appImage: undefined })
-    ).toBe(false);
+    ).toBe(true);
   });
 });

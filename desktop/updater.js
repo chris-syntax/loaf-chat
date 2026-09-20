@@ -8,9 +8,12 @@ const SIX_HOURS = 6 * 60 * 60 * 1000;
 // false branch is a configuration where calling it would throw or mislead.
 function shouldAutoUpdate({ isPackaged, platform, appImage }) {
   if (!isPackaged) return false;
-  if (platform === 'darwin') return false;
   if (platform === 'linux') return Boolean(appImage);
-  return platform === 'win32';
+  // darwin is allowed only because the DMG is now signed with a Developer ID
+  // certificate and notarized. Squirrel.Mac verifies that signature before it
+  // swaps the bundle and refuses the update outright if it is missing, so
+  // reverting the signing setup must also revert this line.
+  return platform === 'darwin' || platform === 'win32';
 }
 
 function initAutoUpdate() {
