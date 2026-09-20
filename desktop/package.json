@@ -26,6 +26,7 @@
       "main.js",
       "resolve.js",
       "linux-protocol.js",
+      "updater.js",
       "package.json"
     ],
     "extraResources": [
@@ -55,10 +56,18 @@
     },
     "linux": {
       "target": [
-        "AppImage",
-        "deb"
+        "AppImage"
       ],
       "category": "Network"
+    },
+    "appImage": {
+      "artifactName": "LoafChat.AppImage"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "chris-syntax",
+      "repo": "loaf-chat",
+      "releaseType": "release"
     }
   },
   "dependencies": {
