@@ -64,7 +64,7 @@ All new code lives in `desktop/`. Nothing outside it changes.
 ```
 desktop/
   main.js          # window lifecycle, app:// protocol, display-media handler
-  preload.js       # empty for now, no IPC surface needed yet
+  resolve.js       # request path -> file in dist/, ported from nginx rules
   package.json     # electron-builder configuration
 ```
 
@@ -94,6 +94,7 @@ custom `app://` scheme, calling `protocol.registerSchemesAsPrivileged()`
   launch and the client re-verifies itself forever.
 - `secure: true` — marks it a secure context. `getUserMedia` does not exist
   outside one, so without this there are no calls at all.
+- `supportFetchAPI: true` — the app fetches `config.json` and its locale files.
 - `allowServiceWorkers: true` — see below. Non-negotiable.
 
 ### Why the service worker must keep working
