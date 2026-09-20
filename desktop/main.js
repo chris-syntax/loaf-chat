@@ -68,8 +68,13 @@ app.whenReady().then(() => {
   // Electron grants permissions by default. Narrow that to what the app
   // actually needs, and only from our own origin.
   const allowed = new Set(['media', 'display-capture', 'clipboard-sanitized-write']);
-  session.defaultSession.setPermissionRequestHandler((contents, permission, callback) => {
-    callback(allowed.has(permission) && contents.getURL().startsWith(ORIGIN));
+  session.defaultSession.setPermissionRequestHandler((contents, permission, callback, details) => {
+    // requestingUrl is the frame that actually asked, which matters because
+    // element-call runs in an iframe. Electron documents it as optional and
+    // omits it for requests not made on behalf of a document, so fall back to
+    // the top-level URL rather than denying and breaking calls.
+    const requestingUrl = details?.requestingUrl ?? contents.getURL();
+    callback(allowed.has(permission) && requestingUrl.startsWith(ORIGIN));
   });
 
   createWindow();
