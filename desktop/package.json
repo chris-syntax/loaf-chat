@@ -7,9 +7,47 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "dist": "electron-builder",
     "postinstall": "node node_modules/electron/install.js"
   },
   "devDependencies": {
-    "electron": "^44.4.3"
+    "electron": "^44.4.3",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "moe.loaf.chat",
+    "productName": "Loaf Chat",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "main.js",
+      "resolve.js",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../dist",
+        "to": "dist"
+      }
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg",
+      "identity": null,
+      "extendInfo": {
+        "NSCameraUsageDescription": "Loaf Chat uses the camera for video calls.",
+        "NSMicrophoneUsageDescription": "Loaf Chat uses the microphone for voice and video calls."
+      }
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Network"
+    }
   }
 }
