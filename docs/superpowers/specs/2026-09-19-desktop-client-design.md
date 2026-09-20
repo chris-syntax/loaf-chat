@@ -14,8 +14,8 @@ working voice, video and screen sharing.
   recorded so the next person does not rediscover it.
 - **Code signing.** No Apple Developer Program membership and no Windows
   Authenticode certificate exist yet. First builds ship unsigned.
-- **Auto-update.** Deferred until builds are signed; unsigned auto-update on
-  macOS does not work and on Windows is a bad idea.
+- **Auto-update.** Superseded — see `2026-09-19-desktop-autoupdate-design.md`.
+  AppImage and Windows do auto-update; macOS remains blocked on signing.
 - **Changes to `src/`.** This is packaging work. The web app is already
   correct for this target.
 
