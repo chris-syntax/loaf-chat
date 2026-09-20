@@ -19,6 +19,12 @@
 - **The custom scheme is `app://`** and its privileges are `standard: true, secure: true, supportFetchAPI: true, allowServiceWorkers: true`. All four are load-bearing; see the spec.
 - **App ID is `moe.loaf.chat`**, product name `Loaf Chat`.
 - **Builds are unsigned.** macOS config sets `"identity": null` explicitly.
+- **Linux is the only platform built in this plan.** The development machine is
+  Linux; macOS follows on the user's own Mac, and Windows is unscheduled.
+- **Agents do not perform GUI verification.** Steps that require looking at a
+  window, watching avatars load, or placing a call are run by the user. An agent
+  implementing these tasks reports such steps as NOT VERIFIED rather than
+  claiming them.
 
 ---
 
@@ -539,8 +545,19 @@ git add desktop/package.json desktop/package-lock.json
 git commit -m "feat(desktop): package with electron-builder for win/mac/linux"
 ```
 
-- [ ] **Step 6: Repeat Steps 3 and 4 on the other two platforms**
+- [ ] **Step 6: Stop here. macOS and Windows are follow-ups.**
 
-electron-builder does not meaningfully cross-compile these targets, so Windows, macOS and Linux each need a build on that platform. Do this before adding CI: a GitHub Actions matrix debugging a build that has never worked locally is the slowest possible feedback loop.
+electron-builder does not meaningfully cross-compile these targets, so each
+platform needs a build on that platform. The development machine is Linux, so
+Steps 3-5 cover Linux only and this task ends there.
 
-Record any platform-specific problems rather than fixing them ad hoc — they are likely to need their own task.
+macOS is next, on the user's Mac, once Linux is known good. It is the platform
+most likely to surprise: the Screen Recording permission prompt, and the
+`NSCameraUsageDescription` / `NSMicrophoneUsageDescription` keys, are both
+macOS-only paths that nothing on Linux exercises. Windows is unscheduled.
+
+Do this before adding CI: a GitHub Actions matrix debugging a build that has
+never worked locally is the slowest possible feedback loop.
+
+Record any platform-specific problems rather than fixing them ad hoc — they are
+likely to need their own task.
