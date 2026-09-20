@@ -136,11 +136,44 @@ faster.
 
 No new secret is required — the default `GITHUB_TOKEN` has `contents: write`.
 
+### Version scheme
+
+The desktop version tracks cinny's, because this is a fork that merges upstream
+regularly and a desktop build is only meaningful against the web app it wraps.
+The shape is `<cinny major>.<cinny minor>.<cinny patch><our build, 2 digits>`,
+with an optional `-beta.<n>`:
+
+| Version | Means |
+|---|---|
+| `4.12.701` | cinny 4.12.7, our first desktop build |
+| `4.12.702` | cinny 4.12.7, our second desktop build |
+| `4.12.801` | cinny 4.12.8, our first desktop build on it |
+| `4.12.701-beta.1` | a prerelease of `4.12.701` |
+
+**Why not the obvious `4.12.7.1`.** Four numeric components are not valid
+semver, and electron-updater is built on semver: `isUpdateAvailable` compares
+with `semver.gt`, and the prerelease channel filters tags with `semver.valid`.
+Both return null or false for `4.12.7.1`, so no update would ever be detected
+— silently. `semver.valid('4.12.7.1')` is `null`; this was checked, not
+assumed.
+
+`4.12.7-loaf.1` was also rejected: it is valid semver but it is a *prerelease*
+of 4.12.7, so every build would sort below any stable release and
+`/releases/latest` would never serve one.
+
+Folding our build number into the patch slot keeps ordering correct in the
+case that matters — an upstream bump outranks any of our builds on the
+previous patch (`4.12.801 > 4.12.702`) — at the cost of a convention someone
+has to know, which is why it is written down here.
+
+The root `package.json` keeps cinny's own four-part `4.12.7.1`. Nothing reads
+it for update decisions, so it is unaffected.
+
 ### Version discipline
 
-The version electron-updater compares is `desktop/package.json`'s (currently
-`0.1.0`). It is independent of the fork's root version (`4.12.7.1`) and is
-bumped by hand.
+The version electron-updater compares is `desktop/package.json`'s, in the
+scheme above. It is derived from the fork's root version but not equal to it
+(`4.12.7.1` there, `4.12.701` here), and it is bumped by hand.
 
 The workflow **must assert that the tag matches the package version** and
 fail the job if not. A tag that disagrees publishes a release which no
