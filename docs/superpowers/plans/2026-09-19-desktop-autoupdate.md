@@ -418,23 +418,22 @@ that would need an apt repository."
 - Produces: a GitHub Release per `desktop-v*` tag containing the AppImage,
   the Windows `.exe`, `latest.yml` and `latest-linux.yml`.
 
-- [ ] **Step 1: Resolve the download-artifact action SHA**
+- [ ] **Step 1: Action SHAs — already resolved, nothing to look up**
 
-This repository pins every action to a commit SHA. `actions/download-artifact`
-is not yet used anywhere here, so its SHA has to be looked up once:
+This repository pins every action to a commit SHA. All four SHAs in Step 2 are
+resolved and correct as written:
 
-```bash
-gh api repos/actions/download-artifact/git/ref/tags/v7.0.0 --jq .object.sha
-```
+- `actions/checkout` and `actions/setup-node` and `actions/upload-artifact` are
+  copied from `.github/workflows/build-pull-request.yml`.
+- `actions/download-artifact` was not previously used here.
+  `37930b1c2abaa49bbe596cd826c3c89aef350131` is v7.0.0, resolved from the
+  public GitHub API. The method was validated by resolving
+  `actions/upload-artifact` v7.0.1 the same way and getting
+  `043fb46d1a93c77aae656e7c1c64a875d1fc6a0a`, byte-identical to the pin already
+  in this repo. Both refs are `type: commit`, so they are valid `uses:` pins
+  rather than annotated-tag objects.
 
-**This makes a network call to GitHub.** Confirm with the user before running
-it. If they would rather not, ask them for the SHA or for permission to use
-the `v7.0.0` tag instead.
-
-Use the returned SHA in Step 2 wherever `<DOWNLOAD_ARTIFACT_SHA>` appears,
-with `# v7.0.0` as the trailing comment. The other three action SHAs below
-are copied from `.github/workflows/build-pull-request.yml` and are correct as
-written.
+Do not re-look these up and do not make network calls.
 
 - [ ] **Step 2: Write the workflow**
 
@@ -509,7 +508,7 @@ jobs:
       # platform-specific optional-dependency problems with a Linux-generated
       # lockfile cannot break the Windows package.
       - name: Download web build
-        uses: actions/download-artifact@<DOWNLOAD_ARTIFACT_SHA> # v7.0.0
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           name: web-dist
           path: dist
