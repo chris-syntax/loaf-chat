@@ -1,4 +1,4 @@
-const { app, BrowserWindow, desktopCapturer, net, protocol, session } = require('electron');
+const { app, BrowserWindow, desktopCapturer, net, protocol, session, shell } = require('electron');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { resolveRequestPath } = require('./resolve');
@@ -56,6 +56,29 @@ function createWindow() {
     minHeight: 400,
     backgroundColor: '#000000',
     autoHideMenuBar: true,
+  });
+
+  // Electron denies window.open() by default, and the web app renders every
+  // link in chat with target="_blank". Without this, clicking a link silently
+  // does nothing. Hand http(s) to the user's real browser and never open a
+  // second Electron window.
+  window.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith('https://') || url.startsWith('http://')) {
+      shell.openExternal(url);
+    }
+    return { action: 'deny' };
+  });
+
+  // A target="_self" link would otherwise replace the app with remote content
+  // in a window with no back button and no visible menu — an unrecoverable
+  // state. Only our own origin may drive top-level navigation.
+  window.webContents.on('will-navigate', (event, url) => {
+    if (!url.startsWith(ORIGIN)) {
+      event.preventDefault();
+      if (url.startsWith('https://') || url.startsWith('http://')) {
+        shell.openExternal(url);
+      }
+    }
   });
 
   window.loadURL(`${ORIGIN}/`);
