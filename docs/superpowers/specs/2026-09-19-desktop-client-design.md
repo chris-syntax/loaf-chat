@@ -207,3 +207,15 @@ Ordered; each depends on the previous.
 6. A video call shows both participants.
 7. Screen sharing shows the shared screen to the remote participant.
 8. All of the above on Windows, macOS and Linux.
+
+## Follow-ups and known risks
+
+Recorded when the Linux implementation landed.
+
+**Screen sharing on Wayland is the least certain part.** `desktopCapturer.getSources({ types: ['screen'] })` depends on PipeWire and xdg-desktop-portal rather than on anything in this repo, and can return an empty array where the portal is not negotiated. The development machine runs Wayland. If screen share fails while voice and video work, try launching with `--enable-features=WebRTCPipeWireCapturer` before treating it as a defect in the handler. The flag is deliberately not set by default: recent Electron enables PipeWire capture on its own, and a flag added speculatively is its own source of bugs.
+
+**The screen-share picker.** The handler returns whichever screen `desktopCapturer` lists first. On a multi-monitor machine there is no way to pick another, and a failed `getSources()` surfaces only as a rejected promise with no UI. Both are the picker's job.
+
+**macOS and Windows builds.** Only AppImage and deb are built. The `mac` and `win` blocks in `desktop/package.json` are configuration for later. macOS is the more likely to surprise: the Screen Recording permission prompt and the two `Info.plist` usage-description keys are paths nothing on Linux exercises.
+
+**`setPermissionCheckHandler` is not implemented**, only `setPermissionRequestHandler`. Electron consults the check handler for some programmatic queries such as `navigator.permissions.query()`, and it defaults to permissive. It is not on the path `getUserMedia` or `getDisplayMedia` take, so calls are unaffected.
