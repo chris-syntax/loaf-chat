@@ -1,0 +1,80 @@
+name: Desktop release
+
+on:
+  push:
+    tags:
+      - 'desktop-v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-web:
+    name: Build web app
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: ".node-version"
+          package-manager-cache: false
+      # A tag that disagrees with the packaged version publishes a release
+      # no installed client will ever consider an update — a silent failure
+      # otherwise discovered only by a user who never gets updated.
+      - name: Check tag matches desktop version
+        run: |
+          TAG="${GITHUB_REF_NAME#desktop-v}"
+          PKG="$(node -p "require('./desktop/package.json').version")"
+          if [ "$TAG" != "$PKG" ]; then
+            echo "Tag ${GITHUB_REF_NAME} implies version ${TAG}, but desktop/package.json is ${PKG}" >&2
+            exit 1
+          fi
+      - name: Install dependencies
+        run: npm ci
+      - name: Build app
+        env:
+          NODE_OPTIONS: '--max_old_space_size=4096'
+        run: npm run build
+      - name: Upload web build
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: web-dist
+          path: dist
+          retention-days: 1
+
+  package:
+    name: Package (${{ matrix.os }})
+    needs: build-web
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # A Windows failure must not throw away a good Linux artifact.
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: ".node-version"
+          package-manager-cache: false
+      # The web app is built once, on Linux, and handed to both runners. The
+      # Windows runner never touches the root manifest, so npm's known
+      # platform-specific optional-dependency problems with a Linux-generated
+      # lockfile cannot break the Windows package.
+      - name: Download web build
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: web-dist
+          path: dist
+      - name: Install desktop dependencies
+        working-directory: desktop
+        run: npm ci
+      - name: Package and publish
+        working-directory: desktop
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --publish always
