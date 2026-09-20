@@ -12,6 +12,8 @@ jobs:
   build-web:
     name: Build web app
     runs-on: ubuntu-latest
+    outputs:
+      prerelease: ${{ steps.version.outputs.prerelease }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -24,6 +26,7 @@ jobs:
       # no installed client will ever consider an update — a silent failure
       # otherwise discovered only by a user who never gets updated.
       - name: Check tag matches desktop version
+        id: version
         run: |
           TAG="${GITHUB_REF_NAME#desktop-v}"
           PKG="$(node -p "require('./desktop/package.json').version")"
@@ -31,6 +34,15 @@ jobs:
             echo "Tag ${GITHUB_REF_NAME} implies version ${TAG}, but desktop/package.json is ${PKG}" >&2
             exit 1
           fi
+          # A semver prerelease (0.2.0-beta.1) has to be flagged prerelease on
+          # the GitHub release itself. electron-updater's default channel
+          # resolves through /releases/latest, which filters on that flag and
+          # not on the version string — without this a beta is offered to
+          # everyone on a stable build.
+          case "$TAG" in
+            *-*) echo "prerelease=true" >> "$GITHUB_OUTPUT" ;;
+            *)   echo "prerelease=false" >> "$GITHUB_OUTPUT" ;;
+          esac
       - name: Install dependencies
         run: npm ci
       - name: Build app
@@ -77,4 +89,5 @@ jobs:
         working-directory: desktop
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EP_PRE_RELEASE: ${{ needs.build-web.outputs.prerelease }}
         run: npx electron-builder --publish always
