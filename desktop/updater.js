@@ -6,14 +6,18 @@ const SIX_HOURS = 6 * 60 * 60 * 1000;
 
 // Whether electron-updater can do anything useful in this process. Every
 // false branch is a configuration where calling it would throw or mislead.
-function shouldAutoUpdate({ isPackaged, platform, appImage }) {
+function shouldAutoUpdate({ isPackaged, platform, appImage, macSigned }) {
   if (!isPackaged) return false;
   if (platform === 'linux') return Boolean(appImage);
-  // darwin is allowed only because the DMG is now signed with a Developer ID
-  // certificate and notarized. Squirrel.Mac verifies that signature before it
-  // swaps the bundle and refuses the update outright if it is missing, so
-  // reverting the signing setup must also revert this line.
-  return platform === 'darwin' || platform === 'win32';
+  // Squirrel.Mac verifies the signature before it swaps the bundle and
+  // refuses an unsigned one outright. Checking anyway would download, fail,
+  // and surface nothing, leaving a client that looks healthy and never
+  // updates — so darwin is gated on the build actually being signed rather
+  // than on the platform. macSigned is injected at package time by the
+  // release workflow and only on the signed path, so it is absent from an
+  // unsigned build and from every development run.
+  if (platform === 'darwin') return Boolean(macSigned);
+  return platform === 'win32';
 }
 
 function initAutoUpdate() {
@@ -24,6 +28,9 @@ function initAutoUpdate() {
       isPackaged: app.isPackaged,
       platform: process.platform,
       appImage: process.env.APPIMAGE,
+      // Injected via electron-builder's extraMetadata, so it is read from the
+      // packaged manifest rather than from this repo's checked-in one.
+      macSigned: require('./package.json').macSigned === true,
     })
   ) {
     return;

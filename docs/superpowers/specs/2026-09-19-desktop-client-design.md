@@ -13,9 +13,11 @@ working voice, video and screen sharing.
 - **iOS.** Descoped for now. See "Why iOS is not here" below — the blocker is
   recorded so the next person does not rediscover it.
 - **Code signing.** Partly superseded (2026-09-20). An Apple Developer
-  Program membership now exists and macOS builds are signed with a Developer
-  ID Application certificate and notarized. No Windows Authenticode
-  certificate exists yet, so NSIS installers still ship unsigned.
+  Program membership has been bought but enrollment is still pending, so
+  macOS ships ad-hoc signed for now; CI signs and notarizes automatically
+  once the certificate exists and the secrets are set, with no code change.
+  No Windows Authenticode certificate exists yet, so NSIS installers also
+  still ship unsigned.
 - **Auto-update.** Superseded — see `2026-09-19-desktop-autoupdate-design.md`.
   AppImage, Windows and macOS all auto-update.
 - **Changes to `src/`.** This is packaging work. The web app is already

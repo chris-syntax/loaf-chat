@@ -19,7 +19,8 @@ own updates, on the two platforms we actually ship.
 | Linux AppImage | yes | yes, electron-updater (zsync) |
 | Windows NSIS | yes | yes, electron-updater |
 | Linux `.deb` | **no — dropped** | n/a |
-| macOS DMG (arm64) | yes | yes, electron-updater (Squirrel.Mac) |
+| macOS DMG (arm64), signed | yes | yes, electron-updater (Squirrel.Mac) |
+| macOS DMG (arm64), unsigned | yes | **no** — ad-hoc signed, Gatekeeper rejects |
 
 ### Why the two exclusions
 
@@ -58,6 +59,7 @@ dialog rather than in-app UI.
 ```js
 if (!app.isPackaged) return;                                        // dev runs
 if (process.platform === 'linux' && !process.env.APPIMAGE) return;  // unpacked
+if (process.platform === 'darwin' && !macSigned) return;            // unsigned
 ```
 
 Each one prevents electron-updater from throwing on a configuration where it
@@ -65,9 +67,18 @@ cannot work. The Linux guard now covers only "someone extracted the AppImage
 and ran the binary directly", but it is one line and it is what makes the
 "inert everywhere else" claim true.
 
-A third guard, `if (process.platform === 'darwin') return;`, was removed on
-2026-09-20 when signing landed. It was never about macOS being unsupported —
-it was about the build being unsigned.
+The darwin guard was originally unconditional. On 2026-09-20 it became
+conditional on `macSigned`, a flag the release workflow injects through
+electron-builder's `extraMetadata` and only on the signed path. It is
+therefore absent from an unsigned build and from every development run.
+
+This matters because the two are not interchangeable. Gating on the platform
+would ship an updater into unsigned builds that can only fail: Squirrel.Mac
+refuses the bundle, the error handler swallows it as a routine background
+failure, and the user is left with a client that looks healthy and never
+updates. Gating on the signature means an unsigned build simply does not
+check, and the same binary starts updating the moment it is built with
+credentials — no second code change.
 
 **Check cadence:** once at startup, then every 6 hours on a `setInterval`. A
 chat client stays open for days; checking only at launch means a machine that
@@ -184,10 +195,28 @@ faster.
 
 Linux and Windows need no secret — the default `GITHUB_TOKEN` has
 `contents: write`. macOS publishes from a separate step that additionally
-requires `MAC_CSC_LINK`, `MAC_CSC_KEY_PASSWORD`, `APPLE_API_KEY`,
-`APPLE_API_KEY_ID`, `APPLE_API_ISSUER` and `APPLE_TEAM_ID`. That step fails
-fast with the missing variable's name if any is unset, because the
-alternative is a release that installs and then never updates.
+uses `MAC_CSC_LINK`, `MAC_CSC_KEY_PASSWORD`, `APPLE_API_KEY`,
+`APPLE_API_KEY_ID`, `APPLE_API_ISSUER` and `APPLE_TEAM_ID`, and branches
+three ways on them:
+
+| Secrets present | Result |
+|---|---|
+| all six | signed, notarized, `macSigned` injected, auto-updates |
+| none | ad-hoc signed, Gatekeeper rejects, no auto-update, job warns |
+| some | **fails the job** |
+
+The partial case fails deliberately. Missing every secret is a decision;
+missing four of six is a typo, and the cost of guessing wrong is shipping an
+unsigned build to users who were meant to receive a signed one.
+
+The unsigned path passes `--config.mac.identity=-` rather than omitting
+signing altogether. macOS refuses to launch an arm64 bundle whose signature
+is absent or has been invalidated by repackaging, so an ad-hoc signature is
+what makes the artifact runnable at all. Gatekeeper still rejects it —
+`spctl` returns `rejected` — so a user has to right-click → Open once. This
+was measured, not assumed: an app signed with an Apple Development
+certificate is rejected exactly the same way, which is why a development
+certificate is not a usable substitute while enrollment is pending.
 
 ### Version scheme
 
@@ -330,10 +359,12 @@ Ordered; each depends on the previous.
 6. The same detect/install/relaunch cycle works on Windows.
 7. A `-beta` tagged release is **not** offered to a client running a stable
    build.
-8. Added 2026-09-20 for macOS: the downloaded DMG opens with no Gatekeeper
-   warning on a machine that has never seen the app — `spctl -a -vvv -t
-   install` on the mounted app reports `accepted` / `Notarized Developer
-   ID`, and `stapler validate` succeeds.
+8. Added 2026-09-20 for macOS, and **only once the six secrets exist**: the
+   downloaded DMG opens with no Gatekeeper warning on a machine that has
+   never seen the app — `spctl -a -vvv -t install` on the mounted app
+   reports `accepted` / `Notarized Developer ID`, and `stapler validate`
+   succeeds. Until then the unsigned build is expected to report `rejected`,
+   and that is not a regression.
 9. A voice and a video call both carry audio and video in the **signed**
    build specifically. The hardened runtime is what makes this a separate
    criterion: an unsigned local build exercises none of the entitlements,

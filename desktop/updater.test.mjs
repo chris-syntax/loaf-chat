@@ -30,13 +30,29 @@ describe('shouldAutoUpdate', () => {
     ).toBe(false);
   });
 
-  it('runs on packaged macOS', () => {
-    // Squirrel.Mac validates the signature on every update it installs, so
-    // this was false for as long as the DMG shipped unsigned. Builds are now
-    // signed with a Developer ID certificate and notarized, which is the only
-    // thing that was ever blocking it.
+  it('runs on packaged macOS only when the build is signed', () => {
+    // Squirrel.Mac validates the signature on every update it installs and
+    // refuses an unsigned bundle outright. An unsigned build left to check
+    // anyway would download, fail, and report nothing — a client that looks
+    // healthy and silently never updates again.
     expect(
-      shouldAutoUpdate({ isPackaged: true, platform: 'darwin', appImage: undefined })
+      shouldAutoUpdate({ isPackaged: true, platform: 'darwin', macSigned: true })
+    ).toBe(true);
+    expect(
+      shouldAutoUpdate({ isPackaged: true, platform: 'darwin', macSigned: false })
+    ).toBe(false);
+    // Absent rather than false: an unsigned build has no macSigned key at all,
+    // because CI injects it only on the signed path.
+    expect(shouldAutoUpdate({ isPackaged: true, platform: 'darwin' })).toBe(false);
+  });
+
+  it('ignores macSigned on the other platforms', () => {
+    // The flag is macOS-specific. A Windows or AppImage build must not become
+    // dependent on it, or a change to how CI injects it would silently
+    // disable updates on platforms that never needed it.
+    expect(shouldAutoUpdate({ isPackaged: true, platform: 'win32' })).toBe(true);
+    expect(
+      shouldAutoUpdate({ isPackaged: true, platform: 'linux', appImage: '/opt/LoafChat.AppImage' })
     ).toBe(true);
   });
 });
