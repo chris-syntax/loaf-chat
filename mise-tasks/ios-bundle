@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+#MISE description="Build the web app and stage dist/ into ios/Resources/dist for the WKWebView shell"
+#
+# The iOS shell serves the web app from its own embedded loopback server
+# (ios/LoafChat/BundleServer.swift) rather than fetching it over the network
+# -- see docs/superpowers/specs/2026-09-20-ios-client-design.md, "Decision:
+# bundled origin on a fixed loopback port". That server expects a `dist`
+# directory to sit at the top of the app bundle (Bundle.main.bundleURL);
+# this task builds the same `npm run build` desktop/main.js already reads
+# from, then stages a copy into ios/Resources/dist for that bundle step to
+# pick up. Nothing in src/ or desktop/ is touched.
+
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+LOAF_DIR="$PWD"
+STAGE_DIR="$LOAF_DIR/ios/Resources/dist"
+
+echo "==> Building web app (npm run build)"
+mise x -- npm run build
+
+if [[ ! -d "$LOAF_DIR/dist" ]]; then
+  echo "error: npm run build did not produce $LOAF_DIR/dist" >&2
+  exit 1
+fi
+
+echo "==> Staging dist/ into ios/Resources/dist"
+rm -rf "$STAGE_DIR"
+mkdir -p "$(dirname "$STAGE_DIR")"
+cp -R "$LOAF_DIR/dist" "$STAGE_DIR"
+
+echo
+echo "Staged $(du -sh "$STAGE_DIR" | cut -f1) into $STAGE_DIR"
+echo "Run ios/build-and-run to build and launch the shell on a simulator."

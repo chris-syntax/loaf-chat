@@ -8,3 +8,5 @@ devAssets
 
 desktop/node_modules
 desktop/release
+
+ios/build

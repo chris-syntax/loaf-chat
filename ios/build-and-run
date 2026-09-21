@@ -1,0 +1,112 @@
+#!/bin/bash
+# Builds LoafChat's iOS WKWebView shell and runs it on an iOS Simulator,
+# following the same raw-swiftc + hand-assembled-.app + simctl approach the
+# sw-spike proved out (see docs/superpowers/specs/2026-09-20-ios-client-design.md,
+# "Step 0: the spike"). Deliberately NOT an .xcodeproj: nothing needs one
+# yet, and hand-writing project.pbxproj is fragile. A real Xcode project is
+# required before TestFlight, which is separately blocked on Apple Developer
+# Program enrollment -- see the design doc's "Blockers".
+#
+# Usage:
+#   ios/build-and-run                    # build, install, launch, capture ~12s of log
+#   RUN_SECONDS=30 ios/build-and-run      # capture longer
+#   DEVICE_NAME="iPhone 17" ios/build-and-run
+set -euo pipefail
+
+export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
+cd "$(dirname "$0")"
+IOS_DIR="$PWD"
+BUILD_DIR="$IOS_DIR/build"
+APP_NAME="LoafChat"
+BUNDLE_ID="moe.loaf.chat.ios"
+DEVICE_NAME="${DEVICE_NAME:-iPhone 17}"
+RUN_SECONDS="${RUN_SECONDS:-12}"
+LOG_FILE="$BUILD_DIR/run-$(date -u +%Y%m%dT%H%M%SZ).log"
+
+DIST_SRC="$IOS_DIR/Resources/dist"
+if [[ ! -d "$DIST_SRC" ]]; then
+  echo "error: $DIST_SRC is missing. Run 'mise run ios-bundle' first." >&2
+  exit 1
+fi
+
+echo "==> Compiling Swift sources"
+SDK="$(xcrun --sdk iphonesimulator --show-sdk-path)"
+mkdir -p "$BUILD_DIR"
+xcrun swiftc -sdk "$SDK" -target arm64-apple-ios18.0-simulator \
+  -o "$BUILD_DIR/$APP_NAME" \
+  "$IOS_DIR/LoafChat/main.swift" \
+  "$IOS_DIR/LoafChat/AppDelegate.swift" \
+  "$IOS_DIR/LoafChat/BundleServer.swift" \
+  "$IOS_DIR/LoafChat/WebViewController.swift" \
+  "$IOS_DIR/LoafChat/NativeErrorViewController.swift"
+
+echo "==> Assembling $APP_NAME.app"
+APP_DIR="$BUILD_DIR/$APP_NAME.app"
+rm -rf "$APP_DIR"
+mkdir -p "$APP_DIR"
+cp "$BUILD_DIR/$APP_NAME" "$APP_DIR/$APP_NAME"
+cp "$IOS_DIR/LoafChat/Info.plist" "$APP_DIR/Info.plist"
+# The bundled origin's whole reason to exist: dist/ ships inside the app and
+# BundleServer serves it from a fixed loopback port (see BundleServer.swift
+# and "Decision: bundled origin on a fixed loopback port" in the design
+# doc). It must sit at the bundle's top level, matching
+# Bundle.main.bundleURL.appendingPathComponent("dist") in AppDelegate.swift.
+cp -R "$DIST_SRC" "$APP_DIR/dist"
+
+echo "==> Ad-hoc code signing (sufficient for the simulator)"
+codesign --force --sign - --timestamp=none "$APP_DIR" >/dev/null
+
+echo "==> Locating simulator: $DEVICE_NAME"
+# Exact match on the trimmed name before the first "(" -- a substring match
+# would let "iPhone 17" match "iPhone 17 Pro" too.
+UDID="$(xcrun simctl list devices available | awk -v name="$DEVICE_NAME" -F'[()]' '
+  { n = $1; sub(/^[ \t]+/, "", n); sub(/[ \t]+$/, "", n); if (n == name) { print $2; exit } }
+')"
+if [[ -z "$UDID" ]]; then
+  echo "error: no available simulator matching \"$DEVICE_NAME\"" >&2
+  xcrun simctl list devices available >&2
+  exit 1
+fi
+echo "    UDID=$UDID"
+
+STATE="$(xcrun simctl list devices | grep "$UDID" | sed -E 's/.*\(([A-Za-z]+)\)[[:space:]]*$/\1/')"
+if [[ "$STATE" != "Booted" ]]; then
+  echo "==> Booting simulator"
+  xcrun simctl boot "$UDID"
+  xcrun simctl bootstatus "$UDID" -b
+else
+  echo "==> Simulator already booted"
+fi
+
+echo "==> Installing"
+xcrun simctl install "$UDID" "$APP_DIR"
+
+echo "==> Launching (capturing ${RUN_SECONDS}s of console output to $LOG_FILE)"
+# --console attaches to the launched process's stdout/stderr, which is where
+# every LOAF_* / BundleServer print() line goes (main.swift forces
+# unbuffered stdout for exactly this reason). It blocks until the process
+# exits or the console disconnects, so it runs in the background here and we
+# terminate the app ourselves after RUN_SECONDS.
+xcrun simctl launch --console "$UDID" "$BUNDLE_ID" > "$LOG_FILE" 2>&1 &
+CONSOLE_PID=$!
+
+# Give the app most of the budget to boot before grabbing a screenshot --
+# useful, human-checkable evidence of what's actually on screen (e.g. the
+# login screen, or a native error screen) that the text log alone can't
+# provide.
+SCREENSHOT_AT=$(( RUN_SECONDS > 4 ? RUN_SECONDS - 2 : RUN_SECONDS ))
+sleep "$SCREENSHOT_AT"
+SCREENSHOT_FILE="$BUILD_DIR/screenshot-$(date -u +%Y%m%dT%H%M%SZ).png"
+xcrun simctl io "$UDID" screenshot "$SCREENSHOT_FILE" >/dev/null 2>&1 || echo "warning: screenshot failed"
+sleep "$(( RUN_SECONDS - SCREENSHOT_AT ))"
+
+xcrun simctl terminate "$UDID" "$BUNDLE_ID" >/dev/null 2>&1 || true
+wait "$CONSOLE_PID" 2>/dev/null || true
+
+echo
+echo "==> Log ($LOG_FILE):"
+cat "$LOG_FILE"
+if [[ -f "$SCREENSHOT_FILE" ]]; then
+  echo
+  echo "==> Screenshot: $SCREENSHOT_FILE"
+fi

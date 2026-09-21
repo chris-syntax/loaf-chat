@@ -1,0 +1,24 @@
+#!/bin/bash
+# Compiles and runs BundleServerTests as a plain macOS command-line
+# executable -- no Xcode test target, no simulator boot, matching the
+# spirit of desktop/resolve.test.mjs and desktop/updater.test.mjs (plain
+# runnable tests next to the code they cover).
+#
+# BundleServer.swift imports only Foundation and Network (no UIKit), so it
+# builds and runs unmodified on macOS: these tests exercise the exact same
+# source file that ships in the app, not a port or a reimplementation.
+set -euo pipefail
+
+export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
+cd "$(dirname "$0")"
+
+SDK="$(xcrun --sdk macosx --show-sdk-path)"
+OUT="build/BundleServerTests"
+mkdir -p build
+
+xcrun swiftc -sdk "$SDK" -o "$OUT" \
+  LoafChat/BundleServer.swift \
+  Tests/BundleServerTests.swift \
+  Tests/main.swift
+
+exec "$OUT"
