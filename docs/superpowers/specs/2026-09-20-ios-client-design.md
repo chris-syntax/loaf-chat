@@ -25,13 +25,15 @@ native polish that it does not feel like a website in a box.
 
 ## Blockers
 
-Both are external and neither is worked around in this design.
+One external blocker, plus one toolchain note.
 
-1. **Xcode is not installed.** `xcode-select -p` is
-   `/Library/Developer/CommandLineTools`; there is no `xcodebuild` and
-   `simctl` lists no devices. Nothing in `ios/` can be built or run until
-   full Xcode is installed. This blocks the spike, and the spike blocks
-   everything else.
+1. **Xcode is installed but not selected.** `xcode-select -p` points at
+   `/Library/Developer/CommandLineTools`, so `xcodebuild` and `simctl` are
+   unavailable by default, but Xcode 26.6 with the iOS 26.5 SDK is present at
+   `/Applications/Xcode.app`. Export
+   `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` — this needs no
+   sudo and no install. Do not infer the install state from the selection
+   state; that mistake cost a round trip during design.
 2. **Apple Developer Program enrollment is pending.** Carried over from
    `2026-09-19-desktop-client-design.md`. APNs keys require an active paid
    membership, and so does TestFlight. This blocks push and distribution,
