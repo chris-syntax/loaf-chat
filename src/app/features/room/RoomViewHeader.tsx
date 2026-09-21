@@ -1,5 +1,6 @@
 import React, { MouseEventHandler, forwardRef, useState } from 'react';
 import FocusTrap from 'focus-trap-react';
+import classNames from 'classnames';
 import {
   Box,
   Avatar,
@@ -447,7 +448,7 @@ export function RoomViewHeader({ callView }: { callView?: boolean }) {
 
   return (
     <PageHeader
-      className={ContainerColor({ variant: 'Surface' })}
+      className={classNames(css.HeaderRoot, ContainerColor({ variant: 'Surface' }))}
       balance={screenSize === ScreenSize.Mobile}
     >
       <Box grow="Yes" gap="300">

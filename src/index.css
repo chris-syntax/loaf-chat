@@ -42,6 +42,8 @@
 html {
   height: 100%;
   overflow: hidden;
+  /* See the overscroll-behavior note on body below. */
+  overscroll-behavior-y: none;
 }
 
 body {
@@ -54,6 +56,15 @@ body {
 
   /*Why font-variant-ligatures => https://github.com/rsms/inter/issues/222 */
   font-variant-ligatures: no-contextual;
+
+  /*
+   * Stops the whole app shell rubber-banding as a unit on touch (most
+   * visible inside the iOS WKWebView shell, but mobile Safari does it too).
+   * This is scoped to the vertical axis and to this top-level element only
+   * so it can't reach into inner scrollers like the message timeline, which
+   * must keep their own natural scrolling and momentum.
+   */
+  overscroll-behavior-y: none;
 }
 #root {
   width: 100%;

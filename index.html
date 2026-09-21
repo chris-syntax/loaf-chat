@@ -3,7 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+    <!--
+      viewport-fit=cover lets the page extend under the notch / Dynamic
+      Island and home indicator inside the iOS WKWebView shell, instead of
+      being letterboxed to the safe area. Everywhere else this is a no-op:
+      browsers without a physical inset just ignore it. Chrome then relies
+      on `env(safe-area-inset-*)` (see RoomViewHeader.css.ts, RoomView.css.ts)
+      to keep content clear of those insets.
+    -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover"
+    />
     <title>Loaf Chat</title>
     <meta name="name" content="Loaf Chat" />
     <meta name="author" content="Ajay Bura" />

@@ -22,6 +22,8 @@ import { useSetting } from '../../state/hooks/settings';
 import { useRoomPermissions } from '../../hooks/useRoomPermissions';
 import { useRoomCreators } from '../../hooks/useRoomCreators';
 import { useRoom } from '../../hooks/useRoom';
+import { useIOSKeyboardAvoidance } from '../../hooks/useIOSKeyboardAvoidance';
+import * as css from './RoomView.css';
 
 const FN_KEYS_REGEX = /^F\d+$/;
 const shouldFocusMessageField = (evt: KeyboardEvent): boolean => {
@@ -57,6 +59,8 @@ const shouldFocusMessageField = (evt: KeyboardEvent): boolean => {
 export function RoomView({ eventId }: { eventId?: string }) {
   const roomInputRef = useRef<HTMLDivElement>(null);
   const roomViewRef = useRef<HTMLDivElement>(null);
+  const bottomBarRef = useRef<HTMLDivElement>(null);
+  useIOSKeyboardAvoidance(bottomBarRef);
 
   const [hideActivity] = useSetting(settingsAtom, 'hideActivity');
 
@@ -102,7 +106,7 @@ export function RoomView({ eventId }: { eventId?: string }) {
         />
         <RoomViewTyping room={room} />
       </Box>
-      <Box shrink="No" direction="Column">
+      <Box shrink="No" direction="Column" ref={bottomBarRef} className={css.RoomViewBottomBar}>
         <div style={{ padding: `0 ${config.space.S400}` }}>
           {tombstoneEvent ? (
             <RoomTombstone
