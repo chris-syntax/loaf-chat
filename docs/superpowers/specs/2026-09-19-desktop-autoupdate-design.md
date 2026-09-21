@@ -209,6 +209,14 @@ The partial case fails deliberately. Missing every secret is a decision;
 missing four of six is a typo, and the cost of guessing wrong is shipping an
 unsigned build to users who were meant to receive a signed one.
 
+The unsigned path must `unset CSC_LINK CSC_KEY_PASSWORD` before it runs.
+An unset repository secret reaches the step as an empty string rather than
+as an absent variable, and `getCscLink()` resolves it with a null check, not
+a truthiness one — so electron-builder accepts `""` as a certificate path
+and dies with `<projectDir> not a file`. This is the same empty-string
+behaviour that forces macOS onto its own workflow step, and it was found the
+expensive way: it failed the first unsigned release, `desktop-v4.12.703-beta.1`.
+
 The unsigned path passes `--config.mac.identity=-` rather than omitting
 signing altogether. macOS refuses to launch an arm64 bundle whose signature
 is absent or has been invalidated by repackaging, so an ad-hoc signature is

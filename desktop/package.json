@@ -1,6 +1,6 @@
 {
   "name": "loaf-chat-desktop",
-  "version": "4.12.703-beta.1",
+  "version": "4.12.704-beta.1",
   "private": true,
   "description": "Electron shell for Loaf Chat",
   "author": "Chris Thomas <me@cthomas.dev>",

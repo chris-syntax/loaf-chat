@@ -141,6 +141,12 @@ jobs:
             # Gatekeeper still rejects it — users must right-click → Open —
             # and it does not auto-update.
             echo "::warning title=Unsigned macOS build::No signing secrets configured. The DMG is ad-hoc signed: Gatekeeper will reject it on first launch and it will not auto-update."
+            # An unset repository secret reaches the step as an empty string,
+            # not as an absent variable, and getCscLink() resolves it with a
+            # null check rather than a truthiness one. electron-builder then
+            # accepts "" as a certificate path and dies with "<projectDir> not
+            # a file". Unsetting is what actually skips signing.
+            unset CSC_LINK CSC_KEY_PASSWORD
             npx electron-builder --publish always --config.mac.identity=-
           else
             # Some but not all: a misconfiguration, not a decision. Failing is
