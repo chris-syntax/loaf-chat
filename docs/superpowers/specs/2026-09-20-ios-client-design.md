@@ -1,7 +1,7 @@
 # Loaf Chat iOS Client — Design
 
 Date: 2026-09-20
-Status: approved; blocked on prerequisites (see "Blockers")
+Status: approved; origin question resolved by spike (simulator), device verification outstanding
 
 ## Goal
 
@@ -83,18 +83,31 @@ Two facts worth recording, both verified 2026-09-20:
 ## Decision: bundled origin on a fixed loopback port
 
 Chosen: ship `dist/` inside the app and serve it from
-`http://127.0.0.1:8437`. `127.0.0.1` is a potentially-trustworthy origin per
-spec, so a service worker should register.
+`http://127.0.0.1:8437`, with `WKAppBoundDomains = ["127.0.0.1"]` and
+`limitsNavigationsToAppBoundDomains = true`.
 
-"Should" is doing real work in that sentence — hence the spike below.
+**Confirmed by the spike (2026-09-20, simulator).** Registration, activation
+and — the part that matters — fetch interception all work.
+
+**The gate is not origin trustworthiness.** The design originally assumed
+`127.0.0.1` being a potentially-trustworthy origin was sufficient. It is not.
+In WKWebView `navigator.serviceWorker` **does not exist at all**
+(`'serviceWorker' in navigator === false`) unless the app opts into app-bound
+domains, regardless of how trustworthy the origin is. With no
+`WKAppBoundDomains` key the API is simply absent, on loopback and on https
+alike. Opting in is what creates the API; the origin then has to be
+trustworthy on top of that.
+
+No ATS exception is required — loopback is exempt. Do **not** set
+`NSAllowsArbitraryLoads`; it was tried and is unnecessary.
 
 ### Alternatives considered
 
-- **Remote origin (`https://loaf.moe` + `WKAppBoundDomains`).** The
-  documented Apple path, with no feasibility unknown in front of it, and the
-  recommendation at design time. Not chosen. **Retained as the fallback if
-  the spike fails** — it requires only a change of URL and Info.plist, no
-  change to the rest of this design.
+- **Remote origin (`https://chat.loaf.moe` + `WKAppBoundDomains`).** The
+  documented Apple path and the recommendation at design time. Not chosen,
+  and no longer needed now the spike has passed. Retained as a fallback: it
+  is a change of URL and Info.plist, nothing more. Note the host is
+  `chat.loaf.moe`, **not** `loaf.moe` — see "Production topology".
 - **Capacitor default (`capacitor://localhost`).** Cannot register a service
   worker: WKWebView requires an http(s) scheme. This is the blocker recorded
   in `2026-09-19-desktop-client-design.md:182` and it still holds.
@@ -125,11 +138,52 @@ Two conditions on the result:
 - **It must run on a physical device, not only the simulator.** Simulator
   WebKit has diverged from device WebKit on this class of gate before.
 
-Config 5 is a control proving the fallback is live. If `WKAppBoundDomains`
-rejects non-registrable entries at parse time, 3 and 4 collapse into 1 and 2.
+### Result (2026-09-20, iPhone 17 / iOS 26.5 simulator, Xcode 26.6)
 
-**Outcome gate:** any of 1–4 passing fixes the shell's configuration. All of
-1–4 failing switches the design to the remote origin, with no other change.
+| #   | register() | activated | **intercepted** |
+| --- | ---------- | --------- | --------------- |
+| 1   | API absent | —         | —               |
+| 2   | API absent | —         | —               |
+| 3   | yes        | yes       | **yes**         |
+| 4   | yes        | yes       | **yes**         |
+
+Configs 1 and 2 did not fail to register; `navigator.serviceWorker` was not
+present at all. See "Decision" above — that is the finding, not a detail.
+
+**`WKAppBoundDomains` accepts non-registrable entries.** `plutil -lint`
+accepts `"localhost"` and `"127.0.0.1"`, and WebKit honours them at runtime.
+The open question is resolved: 3 and 4 do not collapse into 1 and 2.
+
+The `https://loaf.moe` control failed, but for an unrelated reason: it was
+the wrong host (see "Production topology"). Harness validity was instead
+confirmed against a known-good third-party PWA, which registered, activated
+and took control cleanly.
+
+**Outstanding: device verification.** This pass is simulator-only. The
+condition above stands — treat it as a strong signal that de-risks
+implementation, not as the formal gate-pass.
+
+## Production topology
+
+Recorded because the spike's control failed on a wrong assumption about it,
+and because the design previously said "loaf.moe" where it meant several
+different hosts.
+
+- `loaf.moe` — a static landing page. **Not** the app, and not the
+  homeserver. Probing it for `/sw.js` returns 404, which looks alarming and
+  means nothing.
+- `chat.loaf.moe` — the web app. Serves `/sw.js` correctly (verified
+  2026-09-20: 200, `application/javascript`, and it is our worker).
+- `matrix.loaf.moe` — the homeserver, via `/.well-known/matrix/client`
+  delegation from `loaf.moe`. **Authenticated media therefore comes from
+  this origin, not from wherever the app is served.**
+- `livekit.loaf.moe` — the LiveKit SFU behind element-call.
+- `gifs.loaf.moe` — the GIF bridge (`moe.loaf.gif` → `api_url`).
+
+Only `chat.loaf.moe` would ever be a top-level navigation. The rest are
+subresource or WebSocket connections, and app-bound domains only constrains
+top-level frames, so none of them need to be in `WKAppBoundDomains` and the
+10-entry cap is not under pressure.
 
 ## The port must be fixed
 
@@ -170,6 +224,17 @@ untouched.
 
 `BundleServer` must serve an SPA fallback: any unmatched path returns
 `index.html`, the same job `desktop/resolve.js` does for `app://`.
+
+**Readiness trap.** Anything gating on "the worker is ready" before the first
+authenticated-media fetch must wait for actual controller presence, not for
+`registration.active` to be non-null. `registration.active` becomes non-null
+as soon as the worker enters `activating` — before `clients.claim()` inside
+`event.waitUntil()` has resolved. `navigator.serviceWorker.ready` has the
+same trap, since it resolves on `active` existing. Wait for
+`active.state === 'activated'` plus `controllerchange` /
+`navigator.serviceWorker.controller`. This cost the spike a false negative
+before it was diagnosed; in the real app it would present as images failing
+only on a cold start.
 
 ## Push
 
@@ -264,7 +329,7 @@ plain runnable tests.
 
 Ordered; each depends on the previous.
 
-1. Spike resolves the origin question on a physical device.
+1. Spike resolves the origin question on a physical device. (Simulator: done, passed. Device: outstanding.)
 2. App launches and reaches the login screen.
 3. Login to loaf.moe succeeds and survives a restart — proves the fixed port
    held and IndexedDB persisted.
@@ -283,8 +348,9 @@ Ordered; each depends on the previous.
 
 ## Known risks
 
-- **The spike may fail.** Mitigated by the remote-origin fallback, which is
-  a URL and Info.plist change rather than a redesign.
+- **Device WebKit may not match simulator WebKit.** The only remaining form
+  of the original spike risk. Mitigated by the remote-origin fallback, which
+  is a URL and Info.plist change rather than a redesign.
 - **Port 8437 may be taken** by another app on the device. Rare; degrades to
   a fresh session rather than a failure to launch.
 - **WKWebView WebRTC regressions across iOS releases** are outside our
