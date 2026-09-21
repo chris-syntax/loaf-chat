@@ -71,6 +71,25 @@ body {
   height: 100%;
   display: flex;
   flex-direction: column;
+
+  /*
+   * index.html sets viewport-fit=cover so the page draws under the notch,
+   * Dynamic Island and home indicator. That makes insetting the chrome
+   * mandatory rather than optional: without this, every top-level screen
+   * renders content underneath the status bar.
+   *
+   * Applied once here rather than per screen. The per-screen approach was
+   * tried first and immediately missed the login screen, because nothing
+   * makes you remember it when adding a new route.
+   *
+   * Top only. The bottom inset belongs to the composer (RoomView.css.ts),
+   * which also has to move for the keyboard - owning it in one place there
+   * avoids double-insetting it here.
+   *
+   * env() resolves to 0 wherever there is no physical inset, so web and
+   * desktop are unaffected.
+   */
+  padding-top: env(safe-area-inset-top);
 }
 
 *,
