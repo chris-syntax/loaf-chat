@@ -45,7 +45,18 @@
     -->
     <key>WKAppBoundDomains</key>
     <array>
+        <!--
+          127.0.0.1 is the bundled app origin. The rest are here because
+          app-bound domains block *top-level navigation* away from the set,
+          and SSO login is a top-level navigation: "Continue with loaf.moe"
+          sends the webview to the homeserver's /login/sso/redirect, which
+          then bounces to the identity provider. Without these, SSO fails
+          with WKError 13. Max is 10; we are well under.
+        -->
         <string>127.0.0.1</string>
+        <string>matrix.loaf.moe</string>
+        <string>account.loaf.moe</string>
+        <string>loaf.moe</string>
     </array>
 
     <!-- Calls (see "Calls" in the design doc): getUserMedia needs both. -->
