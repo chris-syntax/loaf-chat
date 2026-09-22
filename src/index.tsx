@@ -11,6 +11,8 @@ enableMapSet();
 import './index.css';
 
 import { trimTrailingSlash } from './app/utils/common';
+import { isIOSShell } from './app/utils/iosShell';
+import { observeViewportHeight } from './app/utils/iosViewportHeight';
 import App from './app/pages/App';
 
 // import i18n (needs to be bundled ;))
@@ -19,6 +21,13 @@ import { pushSessionToSW } from './sw-session';
 import { getFallbackSession } from './app/state/sessions';
 
 document.body.classList.add(configClass, varsClass);
+
+// Inside the iOS shell the app must lay out against the visual viewport, or
+// the keyboard scrolls the whole page up behind the Dynamic Island instead
+// of compressing the timeline. See the module for the measurements.
+if (isIOSShell() && window.visualViewport) {
+  observeViewportHeight(document.documentElement.style, window.visualViewport);
+}
 
 // Register Service Worker
 if ('serviceWorker' in navigator) {

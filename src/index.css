@@ -40,7 +40,23 @@
 }
 
 html {
-  height: 100%;
+  /*
+   * --loaf-viewport-height is published by the iOS shell
+   * (src/app/utils/iosViewportHeight.ts) and tracks the visual viewport, so
+   * the app compresses when the keyboard opens instead of WebKit scrolling
+   * the whole document up behind the status bar. Unset everywhere else, so
+   * the 100% fallback is what web and desktop use.
+   */
+  height: var(--loaf-viewport-height, 100%);
+  /*
+   * Animates the keyboard-driven height change over the keyboard's own
+   * duration, which the iOS shell publishes as --loaf-kb-duration
+   * (WebViewController). WebKit resizes the viewport at the start of the
+   * keyboard animation, so without this the layout snaps while the keyboard
+   * is still moving. The curve approximates UIKit's keyboard curve. Unset on
+   * web and desktop, so the duration is 0s and nothing animates.
+   */
+  transition: height var(--loaf-kb-duration, 0s) cubic-bezier(0.38, 0.7, 0.125, 1);
   overflow: hidden;
   /* See the overscroll-behavior note on body below. */
   overscroll-behavior-y: none;
@@ -49,7 +65,9 @@ html {
 body {
   margin: 0;
   padding: 0;
-  height: 100%;
+  height: var(--loaf-viewport-height, 100%);
+  /* Kept in step with html; see the note there. */
+  transition: height var(--loaf-kb-duration, 0s) cubic-bezier(0.38, 0.7, 0.125, 1);
   font-family: var(--font-secondary);
   font-size: 16px;
   font-weight: 400;

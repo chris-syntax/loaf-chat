@@ -97,6 +97,8 @@ import {
 import { markAsRead } from '../../utils/notifications';
 import { useDebounce } from '../../hooks/useDebounce';
 import { getResizeObserverEntry, useResizeObserver } from '../../hooks/useResizeObserver';
+import { isIOSShell } from '../../utils/iosShell';
+import { createBottomAnchor } from '../../utils/bottomAnchor';
 import * as css from './RoomTimeline.css';
 import { inSameDay, minuteDifference, timeDayMonthYear, today, yesterday } from '../../utils/time';
 import { createMentionElement, isEmptyEditor, moveCursor } from '../../components/editor';
@@ -682,6 +684,24 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
       }
     }, [room, liveTimelineLinked])
   );
+
+  const preventFocusSteal = useCallback((evt: React.SyntheticEvent) => evt.preventDefault(), []);
+
+  // Keep the view anchored to the bottom when the timeline itself changes
+  // height -- in the iOS shell that is the keyboard opening, which would
+  // otherwise slide the message being replied to under the composer. Shell
+  // only, so web and desktop keep their existing window-resize behaviour.
+  useEffect(() => {
+    const scrollEl = scrollRef.current;
+    if (!isIOSShell() || !scrollEl) return undefined;
+    const anchor = createBottomAnchor(scrollEl);
+    const observer = new ResizeObserver(anchor.onResize);
+    observer.observe(scrollEl);
+    return () => {
+      observer.disconnect();
+      anchor.dispose();
+    };
+  }, []);
 
   // Stay at bottom when room editor resize
   useResizeObserver(
@@ -1834,6 +1854,13 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
             outlined
             before={<Icon size="50" src={Icons.ArrowBottom} />}
             onClick={handleJumpToLatest}
+            // Don't take focus from the composer: on iOS, losing focus is what
+            // dismisses the keyboard, and jumping to the latest message is
+            // usually the step right before typing a reply. Preventing the
+            // pointerdown default suppresses the focus change without
+            // cancelling the click.
+            onPointerDown={preventFocusSteal}
+            onMouseDown={preventFocusSteal}
           >
             <Text size="L400">Jump to Latest</Text>
           </Chip>

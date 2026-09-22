@@ -13,6 +13,21 @@ export const Sidebar = style([
     display: 'flex',
     flexDirection: 'column',
     color: color.Background.OnContainer,
+
+    /*
+     * Keeps the bottom-most item - the user/settings avatar - clear of the
+     * home indicator. The top inset is handled once at #root (index.css),
+     * but the bottom one cannot be: the composer translates up for the
+     * keyboard, and a bottom pad on #root would leave it floating that far
+     * above the keyboard. So bottom insets belong to whichever container
+     * actually sits on the bottom edge.
+     *
+     * --loaf-safe-bottom zeroes this while the keyboard is up (see
+     * src/app/utils/iosViewportHeight.ts); otherwise env() applies, and
+     * env() is 0 wherever there is no inset, so web and desktop are
+     * unaffected.
+     */
+    paddingBottom: 'var(--loaf-safe-bottom, env(safe-area-inset-bottom))',
   },
 ]);
 
