@@ -45,6 +45,11 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: moe.loaf.chat.ios
+        # Mirrors CFBundleDisplayName in Info.plist. Xcode's UI (the target's
+        # General tab, and the sheet that creates the App Store Connect record)
+        # reads the name from this build setting, not from a hand-written
+        # plist -- without it that sheet rejects an empty app name.
+        INFOPLIST_KEY_CFBundleDisplayName: Loaf Chat
         INFOPLIST_FILE: LoafChat/Info.plist
         GENERATE_INFOPLIST_FILE: NO
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon

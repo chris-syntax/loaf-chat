@@ -9,7 +9,7 @@
     <key>CFBundleName</key>
     <string>Loaf Chat</string>
     <key>CFBundleDisplayName</key>
-    <string>Loaf Chat</string>
+    <string>$(INFOPLIST_KEY_CFBundleDisplayName)</string>
     <key>CFBundleVersion</key>
     <string>$(CURRENT_PROJECT_VERSION)</string>
     <key>CFBundleShortVersionString</key>
