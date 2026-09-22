@@ -225,13 +225,17 @@ func runAllBundleServerTests() {
     testResolveRequestPath()
     testFileServingTraversalSafety()
     testPortFallback()
+}
 
+/// Shared exit point. Lives here because the counters do; every suite adds
+/// to them and main.swift reports once at the end.
+func reportAndExit() -> Never {
     print("")
     if failureCount == 0 {
-        print("All \(passCount) BundleServer checks passed.")
+        print("All \(passCount) checks passed.")
         exit(0)
     } else {
-        print("\(failureCount) BundleServer check(s) failed, \(passCount) passed.")
+        print("\(failureCount) check(s) failed, \(passCount) passed.")
         exit(1)
     }
 }

@@ -1,3 +1,4 @@
+import AuthenticationServices
 import UIKit
 import WebKit
 
@@ -7,13 +8,17 @@ import WebKit
 /// port" in docs/superpowers/specs/2026-09-20-ios-client-design.md -- this
 /// class must not deviate from that configuration; it is the thing the
 /// spike spent a day establishing.
-final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler {
+final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler, ASWebAuthenticationPresentationContextProviding {
     private let targetURL: URL
     private let usedFallbackPort: Bool
     private var webView: WKWebView!
     private var didShowFallbackNotice = false
     private var didReportError = false
     private var serviceWorkerBecameReady = false
+
+    /// Held for the lifetime of the sheet; ASWebAuthenticationSession is
+    /// deallocated (and the sheet dismissed) if nothing retains it.
+    private var authSession: ASWebAuthenticationSession?
 
     /// Wall-clock budget for the service worker to reach `activated` with a
     /// controller attached, counted from navigation finishing. Generous
@@ -160,6 +165,22 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        // Hands the keyboard's animation duration to the page before WebKit
+        // resizes the viewport, so the layout can animate alongside the
+        // keyboard instead of snapping. Measured: the viewport resize lands
+        // ~30ms after keyboardWill{Show,Hide}, at the *start* of a ~383ms
+        // animation -- without this the composer drops behind a keyboard
+        // that is still on screen when it closes. The duration is read per
+        // notification rather than hardcoded, since it varies by device and
+        // keyboard. See the --loaf-kb-duration transition in src/index.css.
+        for name in [UIResponder.keyboardWillShowNotification, UIResponder.keyboardWillHideNotification] {
+            NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] note in
+                let duration = note.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double ?? 0
+                self?.webView.evaluateJavaScript(
+                    "document.documentElement.style.setProperty('--loaf-kb-duration', '\(duration)s')"
+                )
+            }
+        }
         print("LOAF_LOADING url=\(targetURL.absoluteString) usedFallbackPort=\(usedFallbackPort)")
         webView.load(URLRequest(url: targetURL))
     }
@@ -202,8 +223,87 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
 
     // MARK: - WKNavigationDelegate
 
+    /// Diverts Matrix SSO login into a system browser card. See SSOFlow for
+    /// why this cannot just be an ordinary navigation.
+    func webView(
+        _ webView: WKWebView,
+        decidePolicyFor navigationAction: WKNavigationAction,
+        decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
+    ) {
+        guard
+            navigationAction.targetFrame?.isMainFrame ?? true,
+            let url = navigationAction.request.url,
+            SSOFlow.isSSORedirect(url)
+        else {
+            decisionHandler(.allow)
+            return
+        }
+
+        decisionHandler(.cancel)
+        startSSO(ssoURL: url)
+    }
+
+    private func startSSO(ssoURL: URL) {
+        guard
+            let redirectURL = SSOFlow.originalRedirectURL(from: ssoURL),
+            let sheetURL = SSOFlow.rewrittenForSystemSheet(ssoURL)
+        else {
+            print("LOAF_SSO_ERROR could not rewrite \(ssoURL.absoluteString)")
+            return
+        }
+
+        print("LOAF_SSO_START \(sheetURL.absoluteString)")
+
+        let session = ASWebAuthenticationSession(
+            url: sheetURL,
+            callbackURLScheme: SSOFlow.callbackScheme
+        ) { [weak self] callbackURL, error in
+            self?.authSession = nil
+            self?.finishSSO(redirectURL: redirectURL, callbackURL: callbackURL, error: error)
+        }
+        session.presentationContextProvider = self
+        // Share Safari's session so an already-signed-in browser does not
+        // force the password to be typed again.
+        session.prefersEphemeralWebBrowserSession = false
+        authSession = session
+        session.start()
+    }
+
+    private func finishSSO(redirectURL: URL, callbackURL: URL?, error: Error?) {
+        // A user-cancelled sheet is an ordinary outcome, not a failure: it
+        // must leave the app on the login screen rather than showing the
+        // fatal error view, which cannot be dismissed back into the app.
+        if let error = error as? ASWebAuthenticationSessionError,
+           error.code == .canceledLogin {
+            print("LOAF_SSO_CANCELLED")
+            return
+        }
+        if let error {
+            print("LOAF_SSO_ERROR \(error)")
+            return
+        }
+        guard
+            let callbackURL,
+            let token = SSOFlow.loginToken(from: callbackURL),
+            let completion = SSOFlow.completionURL(redirectURL: redirectURL, loginToken: token)
+        else {
+            print("LOAF_SSO_ERROR no loginToken in callback")
+            return
+        }
+
+        print("LOAF_SSO_COMPLETE loading redirect with token")
+        webView.load(URLRequest(url: completion))
+    }
+
+    func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+        view.window ?? ASPresentationAnchor()
+    }
+
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         print("LOAF_NAV_FINISHED url=\(webView.url?.absoluteString ?? "nil")")
+        // Deferred to here because the private content view that owns the
+        // accessory bar does not exist until the first load has laid out.
+        webView.removeInputAccessoryView()
     }
 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {

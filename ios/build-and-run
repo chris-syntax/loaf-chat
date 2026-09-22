@@ -37,6 +37,8 @@ xcrun swiftc -sdk "$SDK" -target arm64-apple-ios18.0-simulator \
   "$IOS_DIR/LoafChat/main.swift" \
   "$IOS_DIR/LoafChat/AppDelegate.swift" \
   "$IOS_DIR/LoafChat/BundleServer.swift" \
+  "$IOS_DIR/LoafChat/InputAccessoryRemoval.swift" \
+  "$IOS_DIR/LoafChat/SSOFlow.swift" \
   "$IOS_DIR/LoafChat/WebViewController.swift" \
   "$IOS_DIR/LoafChat/NativeErrorViewController.swift"
 

@@ -43,20 +43,35 @@
       the spike and are unnecessary -- do not add them back. Loopback is
       exempt from ATS on its own.
     -->
+    <!--
+      Deliberately just the app's own origin. SSO login used to need the
+      homeserver and identity provider bound here, but it now runs in an
+      ASWebAuthenticationSession instead (see SSOFlow.swift), so the webview
+      never navigates off-origin at the top level.
+
+      Keeping them bound would be worse than useless: if the SSO
+      interception in WebViewController ever stopped matching, the
+      navigation would silently succeed in-app -- the exact UX the system
+      sheet exists to replace -- instead of failing loudly with WKError 13.
+    -->
     <key>WKAppBoundDomains</key>
     <array>
-        <!--
-          127.0.0.1 is the bundled app origin. The rest are here because
-          app-bound domains block *top-level navigation* away from the set,
-          and SSO login is a top-level navigation: "Continue with loaf.moe"
-          sends the webview to the homeserver's /login/sso/redirect, which
-          then bounces to the identity provider. Without these, SSO fails
-          with WKError 13. Max is 10; we are well under.
-        -->
         <string>127.0.0.1</string>
-        <string>matrix.loaf.moe</string>
-        <string>account.loaf.moe</string>
-        <string>loaf.moe</string>
+    </array>
+
+    <!--
+      The ASWebAuthenticationSession callback scheme. See SSOFlow.callbackScheme.
+    -->
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>moe.loaf.chat.ios.sso</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>moe.loaf.chat.ios</string>
+            </array>
+        </dict>
     </array>
 
     <!-- Calls (see "Calls" in the design doc): getUserMedia needs both. -->

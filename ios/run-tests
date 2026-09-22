@@ -18,7 +18,9 @@ mkdir -p build
 
 xcrun swiftc -sdk "$SDK" -o "$OUT" \
   LoafChat/BundleServer.swift \
+  LoafChat/SSOFlow.swift \
   Tests/BundleServerTests.swift \
+  Tests/SSOFlowTests.swift \
   Tests/main.swift
 
 exec "$OUT"
