@@ -31,6 +31,7 @@
 		E51C9A52C1648CC9C0052E0E /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		E96ECF9F50745ED956DEA091 /* SSOFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSOFlow.swift; sourceTree = "<group>"; };
 		FF7651598A7D0DA7571B271E /* WebViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebViewController.swift; sourceTree = "<group>"; };
+		"TEMP_D25F5D93-2C56-41B7-9151-38EFB90F3BF4" /* Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Version.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -73,6 +74,14 @@
 				C22F1A533F8ACAD7A3945992 /* Resources */,
 				7B5D0E02E7FCD97920504185 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		"TEMP_67DFE8FD-8962-4B03-BAFE-91EF8BB11E59" /* ios */ = {
+			isa = PBXGroup;
+			children = (
+				"TEMP_D25F5D93-2C56-41B7-9151-38EFB90F3BF4" /* Version.xcconfig */,
+			);
+			path = ios;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -216,7 +225,6 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
-				MARKETING_VERSION = 0.1.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -230,6 +238,7 @@
 		};
 		8838736620FA3FC664A794FD /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = "TEMP_D25F5D93-2C56-41B7-9151-38EFB90F3BF4" /* Version.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
@@ -251,6 +260,7 @@
 		};
 		A1A0EE7ACBF694A37800B487 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = "TEMP_D25F5D93-2C56-41B7-9151-38EFB90F3BF4" /* Version.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
@@ -319,7 +329,6 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
-				MARKETING_VERSION = 0.1.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";

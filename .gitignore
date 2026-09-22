@@ -11,3 +11,4 @@ desktop/release
 
 ios/build
 xcuserdata/
+ios/Version.xcconfig
