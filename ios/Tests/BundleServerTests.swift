@@ -215,6 +215,64 @@ func testPortFallback() {
     try? FileManager.default.removeItem(at: tmpRoot)
 }
 
+// MARK: - Loopback only
+
+/// The first non-loopback IPv4 address on this machine, if it has one.
+private func lanIPv4Address() -> String? {
+    var head: UnsafeMutablePointer<ifaddrs>?
+    guard getifaddrs(&head) == 0, let first = head else { return nil }
+    defer { freeifaddrs(head) }
+    for ifa in sequence(first: first, next: { $0.pointee.ifa_next }) {
+        guard let sa = ifa.pointee.ifa_addr, sa.pointee.sa_family == UInt8(AF_INET) else { continue }
+        if (ifa.pointee.ifa_flags & UInt32(IFF_LOOPBACK)) != 0 { continue }
+        var host = [CChar](repeating: 0, count: Int(NI_MAXHOST))
+        if getnameinfo(sa, socklen_t(sa.pointee.sa_len), &host, socklen_t(host.count), nil, 0, NI_NUMERICHOST) == 0 {
+            return String(cString: host)
+        }
+    }
+    return nil
+}
+
+/// Whether a TCP connection to address:port succeeds.
+private func canConnect(to address: String, port: UInt16) -> Bool {
+    let fd = socket(AF_INET, SOCK_STREAM, 0)
+    guard fd >= 0 else { return false }
+    defer { close(fd) }
+    var addr = sockaddr_in()
+    addr.sin_family = sa_family_t(AF_INET)
+    addr.sin_port = port.bigEndian
+    addr.sin_addr.s_addr = inet_addr(address)
+    return withUnsafePointer(to: &addr) {
+        $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+            connect(fd, $0, socklen_t(MemoryLayout<sockaddr_in>.size)) == 0
+        }
+    }
+}
+
+func testLoopbackOnly() {
+    // Regression: requiredInterfaceType = .loopback alone still listened on
+    // the wildcard address, so the server was reachable from the LAN.
+    let tmpRoot = FileManager.default.temporaryDirectory.appendingPathComponent("bundleserver-loopback-\(UUID().uuidString)")
+    try! FileManager.default.createDirectory(at: tmpRoot, withIntermediateDirectories: true)
+    let server = BundleServer(root: tmpRoot)
+    defer {
+        server.stop()
+        Thread.sleep(forTimeInterval: 0.2)
+    }
+    guard let port = try? server.start() else {
+        check(false, "loopback test: server should start")
+        return
+    }
+
+    check(canConnect(to: "127.0.0.1", port: port), "reachable on 127.0.0.1")
+
+    guard let lan = lanIPv4Address() else {
+        print("SKIP: no non-loopback IPv4 address; cannot check LAN reachability")
+        return
+    }
+    check(!canConnect(to: lan, port: port), "not reachable on the LAN address \(lan)")
+}
+
 // MARK: - Run
 
 /// Swift only allows top-level statements in a file literally named
@@ -225,6 +283,7 @@ func runAllBundleServerTests() {
     testResolveRequestPath()
     testFileServingTraversalSafety()
     testPortFallback()
+    testLoopbackOnly()
 }
 
 /// Shared exit point. Lives here because the counters do; every suite adds

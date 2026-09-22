@@ -134,9 +134,16 @@ final class BundleServer {
         // opt into reuse, which is exactly the shape of "something else on
         // the device is really using this port" (see BundleServerTests).
         params.allowLocalEndpointReuse = true
+        // Bind the loopback *address*, not just the loopback interface.
+        // requiredInterfaceType alone still listened on the wildcard address
+        // (lsof showed *:8437), which put the server on the LAN of whatever
+        // network the phone -- or a simulator's host Mac -- was on. It only
+        // serves the public web bundle, but nothing outside this device has
+        // any business reaching it.
         params.requiredInterfaceType = .loopback
+        params.requiredLocalEndpoint = .hostPort(host: .ipv4(.loopback), port: nwPort)
 
-        guard let candidateListener = try? NWListener(using: params, on: nwPort) else {
+        guard let candidateListener = try? NWListener(using: params) else {
             throw BundleServerError.bindFailed(port, BundleServerError.invalidPort(port))
         }
 
