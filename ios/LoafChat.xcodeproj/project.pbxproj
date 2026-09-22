@@ -16,6 +16,7 @@
 		8EE573B79691BA3268EA30CA /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0733DD46FB45C3CDE10250B2 /* main.swift */; };
 		C94B7090B234BA5BE3990C3F /* InputAccessoryRemoval.swift in Sources */ = {isa = PBXBuildFile; fileRef = 738A64CD1ABB5FA2FCC3275B /* InputAccessoryRemoval.swift */; };
 		EA9308D2BA3B3CE1E2FC8667 /* WebViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF7651598A7D0DA7571B271E /* WebViewController.swift */; };
+		F560A4BBCB90306D9A5A7F5F /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51C9A52C1648CC9C0052E0E /* SceneDelegate.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -27,6 +28,7 @@
 		738A64CD1ABB5FA2FCC3275B /* InputAccessoryRemoval.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputAccessoryRemoval.swift; sourceTree = "<group>"; };
 		CB270492A36F61310F173247 /* dist */ = {isa = PBXFileReference; lastKnownFileType = folder; name = dist; path = Resources/dist; sourceTree = SOURCE_ROOT; };
 		D75DFD56313E7B7B0BC8B3CF /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		E51C9A52C1648CC9C0052E0E /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		E96ECF9F50745ED956DEA091 /* SSOFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSOFlow.swift; sourceTree = "<group>"; };
 		FF7651598A7D0DA7571B271E /* WebViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebViewController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -49,6 +51,7 @@
 				738A64CD1ABB5FA2FCC3275B /* InputAccessoryRemoval.swift */,
 				0733DD46FB45C3CDE10250B2 /* main.swift */,
 				72E60A6D4A652032188799C5 /* NativeErrorViewController.swift */,
+				E51C9A52C1648CC9C0052E0E /* SceneDelegate.swift */,
 				E96ECF9F50745ED956DEA091 /* SSOFlow.swift */,
 				FF7651598A7D0DA7571B271E /* WebViewController.swift */,
 			);
@@ -149,6 +152,7 @@
 				C94B7090B234BA5BE3990C3F /* InputAccessoryRemoval.swift in Sources */,
 				045B5458D063AECF316D11CD /* NativeErrorViewController.swift in Sources */,
 				36DA5759A55AE5E90A3FD9CE /* SSOFlow.swift in Sources */,
+				F560A4BBCB90306D9A5A7F5F /* SceneDelegate.swift in Sources */,
 				EA9308D2BA3B3CE1E2FC8667 /* WebViewController.swift in Sources */,
 				8EE573B79691BA3268EA30CA /* main.swift in Sources */,
 			);

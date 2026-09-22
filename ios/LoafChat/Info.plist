@@ -20,6 +20,28 @@
     <string>6.0</string>
     <key>LSRequiresIPhoneOS</key>
     <true/>
+    <!--
+      UIScene lifecycle. Mandatory from iOS 27: without a scene manifest the
+      app is terminated at launch (UIKit's NoSceneLifecycleAdoption check).
+      One scene only -- the loopback server and the web app are singletons.
+    -->
+    <key>UIApplicationSceneManifest</key>
+    <dict>
+        <key>UIApplicationSupportsMultipleScenes</key>
+        <false/>
+        <key>UISceneConfigurations</key>
+        <dict>
+            <key>UIWindowSceneSessionRoleApplication</key>
+            <array>
+                <dict>
+                    <key>UISceneConfigurationName</key>
+                    <string>Default Configuration</string>
+                    <key>UISceneDelegateClassName</key>
+                    <string>SceneDelegate</string>
+                </dict>
+            </array>
+        </dict>
+    </dict>
     <key>UILaunchScreen</key>
     <dict/>
     <key>UIRequiredDeviceCapabilities</key>

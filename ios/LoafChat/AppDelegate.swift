@@ -1,17 +1,27 @@
 import UIKit
 
+/// Owns the process-wide BundleServer. The window lives in SceneDelegate:
+/// iOS 27 refuses to launch an app that builds its window here (the
+/// pre-UIScene lifecycle), terminating it in UIKit before any of our code
+/// logs a line.
 @objc(AppDelegate)
 class AppDelegate: UIResponder, UIApplicationDelegate {
-    var window: UIWindow?
     private var server: BundleServer?
+    private var root: UIViewController?
 
     func application(_ application: UIApplication,
                       didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        let window = UIWindow(frame: UIScreen.main.bounds)
-        self.window = window
-        window.rootViewController = boot()
-        window.makeKeyAndVisible()
-        return true
+        true
+    }
+
+    /// The view controller a scene should show. Built once: the server is
+    /// bound to a fixed port and must not be started a second time if UIKit
+    /// ever reconnects the scene.
+    func rootViewController() -> UIViewController {
+        if let root { return root }
+        let root = boot()
+        self.root = root
+        return root
     }
 
     /// Starts BundleServer and returns the view controller to show: the
