@@ -1,0 +1,9 @@
+{
+  "id" : "2a13cc04-5d21-46dc-a782-a9426c8de011",
+  "targets" : [
+    {
+      "id" : "da7daf02-2cc0-4661-8ee7-8f1e3621e466",
+      "name" : "LoafChat"
+    }
+  ]
+}
