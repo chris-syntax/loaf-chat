@@ -3,6 +3,8 @@
 node = "24.13.1"
 # Needed only to build element-call, which is a pnpm project.
 pnpm = "11.6.0"
+# Generates ios/LoafChat.xcodeproj from ios/project.yml; see ios/README.md.
+xcodegen = "2.46.0"
 
 [env]
 # Where the element-call fork lives. Override per-machine with

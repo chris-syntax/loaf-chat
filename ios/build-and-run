@@ -1,11 +1,7 @@
 #!/bin/bash
-# Builds LoafChat's iOS WKWebView shell and runs it on an iOS Simulator,
-# following the same raw-swiftc + hand-assembled-.app + simctl approach the
-# sw-spike proved out (see docs/superpowers/specs/2026-09-20-ios-client-design.md,
-# "Step 0: the spike"). Deliberately NOT an .xcodeproj: nothing needs one
-# yet, and hand-writing project.pbxproj is fragile. A real Xcode project is
-# required before TestFlight, which is separately blocked on Apple Developer
-# Program enrollment -- see the design doc's "Blockers".
+# Builds LoafChat's iOS WKWebView shell with xcodebuild and runs it on an iOS
+# Simulator. The project is generated from ios/project.yml first, so the
+# simulator loop and Xcode Cloud always build the same definition.
 #
 # Usage:
 #   ios/build-and-run                    # build, install, launch, capture ~12s of log
@@ -29,34 +25,21 @@ if [[ ! -d "$DIST_SRC" ]]; then
   exit 1
 fi
 
-echo "==> Compiling Swift sources"
-SDK="$(xcrun --sdk iphonesimulator --show-sdk-path)"
-mkdir -p "$BUILD_DIR"
-xcrun swiftc -sdk "$SDK" -target arm64-apple-ios18.0-simulator \
-  -o "$BUILD_DIR/$APP_NAME" \
-  "$IOS_DIR/LoafChat/main.swift" \
-  "$IOS_DIR/LoafChat/AppDelegate.swift" \
-  "$IOS_DIR/LoafChat/BundleServer.swift" \
-  "$IOS_DIR/LoafChat/InputAccessoryRemoval.swift" \
-  "$IOS_DIR/LoafChat/SSOFlow.swift" \
-  "$IOS_DIR/LoafChat/WebViewController.swift" \
-  "$IOS_DIR/LoafChat/NativeErrorViewController.swift"
+echo "==> Generating Xcode project from project.yml"
+mise x -- xcodegen --spec "$IOS_DIR/project.yml" --quiet
 
-echo "==> Assembling $APP_NAME.app"
-APP_DIR="$BUILD_DIR/$APP_NAME.app"
-rm -rf "$APP_DIR"
-mkdir -p "$APP_DIR"
-cp "$BUILD_DIR/$APP_NAME" "$APP_DIR/$APP_NAME"
-cp "$IOS_DIR/LoafChat/Info.plist" "$APP_DIR/Info.plist"
-# The bundled origin's whole reason to exist: dist/ ships inside the app and
-# BundleServer serves it from a fixed loopback port (see BundleServer.swift
-# and "Decision: bundled origin on a fixed loopback port" in the design
-# doc). It must sit at the bundle's top level, matching
-# Bundle.main.bundleURL.appendingPathComponent("dist") in AppDelegate.swift.
-cp -R "$DIST_SRC" "$APP_DIR/dist"
-
-echo "==> Ad-hoc code signing (sufficient for the simulator)"
-codesign --force --sign - --timestamp=none "$APP_DIR" >/dev/null
+echo "==> Building with xcodebuild"
+DERIVED="$BUILD_DIR/DerivedData"
+xcodebuild \
+  -project "$IOS_DIR/$APP_NAME.xcodeproj" \
+  -scheme "$APP_NAME" \
+  -configuration Debug \
+  -destination "generic/platform=iOS Simulator" \
+  -derivedDataPath "$DERIVED" \
+  -quiet \
+  build
+APP_DIR="$DERIVED/Build/Products/Debug-iphonesimulator/$APP_NAME.app"
+[[ -d "$APP_DIR/dist" ]] || { echo "error: built app has no dist/ at its top level" >&2; exit 1; }
 
 echo "==> Locating simulator: $DEVICE_NAME"
 # Exact match on the trimmed name before the first "(" -- a substring match
